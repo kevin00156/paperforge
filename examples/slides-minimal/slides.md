@@ -1,4 +1,5 @@
 ---
+profile: slides-ncu
 marp: true
 theme: ncu
 paginate: true

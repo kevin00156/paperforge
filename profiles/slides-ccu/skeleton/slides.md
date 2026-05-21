@@ -1,4 +1,5 @@
 ---
+profile: slides-ccu  # PaperForge 編譯時自動套用此 profile（可被 CLI --profile 覆寫）
 marp: true
 theme: ccu
 paginate: true

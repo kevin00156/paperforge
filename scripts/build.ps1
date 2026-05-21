@@ -33,7 +33,8 @@
     PDF 引擎。預設 xelatex。
 
 .PARAMETER ProfileName
-    Profile 名稱（對應 profiles/<name>/）。預設 thesis-ncu。
+    Profile 名稱。優先序：CLI 旗標 > 輸入檔 YAML 的 profile: 欄位 >
+    預設 thesis-ncu。對應 profiles/<name>/。
     例：thesis-ncu、journal-ieee（未來新增）。
 
 .PARAMETER Template
@@ -110,6 +111,36 @@ function Invoke-Native {
 $ScriptDir = Split-Path -Parent $PSCommandPath
 $RepoRoot = Split-Path -Parent $ScriptDir
 
+# 是否由 CLI 顯式指定 -ProfileName（用 -Profile 別名也算）
+$ProfileFromCli = $PSBoundParameters.ContainsKey('ProfileName')
+
+# --- 讀取 Markdown 檔開頭 YAML frontmatter 的 profile: 欄位 ---
+# 若沒有 frontmatter 或 profile 欄位則回傳空字串
+function Read-YamlProfile {
+    param([string]$File)
+    if (-not (Test-Path $File)) { return "" }
+    $sawStart = $false
+    $inFm = $false
+    foreach ($line in Get-Content -LiteralPath $File -Encoding UTF8) {
+        if ($line -match '^---\s*$') {
+            if (-not $sawStart) {
+                $sawStart = $true
+                $inFm = $true
+                continue
+            } else {
+                break
+            }
+        }
+        if ($inFm -and $line -match '^profile\s*:\s*(.+?)\s*$') {
+            $val = $Matches[1]
+            $val = $val -replace '\s+#.*$', ''
+            $val = $val -replace '^[''"]|[''"]$', ''
+            return $val.Trim()
+        }
+    }
+    return ""
+}
+
 # --- 自動偵測：根據檔名分派至 paper 或 slides 編譯流程 ---
 function Get-BuildMode {
     param([string]$File)
@@ -182,11 +213,21 @@ if ($BuildMode -eq "slides") {
     if ($InputFile) { $passArgs += $InputFile }
     if ($PSBoundParameters.ContainsKey('Output')) { $passArgs += @("-Output", $Output) }
     if ($Watch) { $passArgs += "-Watch" }
+    if ($ProfileFromCli) { $passArgs += @("-ProfileName", $ProfileName) }
     & $slidesScript @passArgs
     exit $LASTEXITCODE
 }
 
 # --- 以下為 paper 模式 ---
+
+# 若 CLI 沒指定 -ProfileName，嘗試從輸入檔的 YAML frontmatter 讀 profile: 欄位
+if (-not $ProfileFromCli -and $InputFile -and (Test-Path $InputFile)) {
+    $yamlProfile = Read-YamlProfile -File $InputFile
+    if ($yamlProfile) {
+        $ProfileName = $yamlProfile
+        Write-Info "從 YAML frontmatter 偵測到 profile：$ProfileName"
+    }
+}
 
 # --- 模板與 CSL 路徑（由 profile 推導，可被 -Template 覆寫） ---
 $ProfileDir = Join-Path $RepoRoot "profiles\$ProfileName"
