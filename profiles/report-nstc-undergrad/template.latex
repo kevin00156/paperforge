@@ -486,6 +486,7 @@ $endif$
 % 使用者 YAML 中的 header-includes 會在這之後 append,可 override 此處任何一條。
 % ============================================================
 \usepackage{titlesec}
+\usepackage{titletoc}
 \usepackage{makecell}
 \usepackage{indentfirst}
 \usepackage{fancyhdr}
@@ -496,15 +497,17 @@ $endif$
 \usepackage{float}
 \usepackage{longtable}
 \usepackage{colortbl}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{zhnumber}
 
 % === 圖表位置:偏好原位 ===
 \floatplacement{figure}{!htbp}
 \floatplacement{table}{!htbp}
 
 % === 圖表編號採「章-序號」(國科會報告慣例:圖 1-1、表 3-2) ===
-\usepackage{chngcntr}
-\counterwithin{figure}{section}
-\counterwithin{table}{section}
+\numberwithin{figure}{section}
+\numberwithin{table}{section}
 \renewcommand{\thefigure}{\arabic{section}-\arabic{figure}}
 \renewcommand{\thetable}{\arabic{section}-\arabic{table}}
 
@@ -518,7 +521,8 @@ $endif$
   colorlinks=true,
   linkcolor=black,
   citecolor=blue,
-  urlcolor=blue
+  urlcolor=blue,
+  breaklinks=true
 }
 
 % === 首行縮排 2 字元 ===
@@ -534,29 +538,77 @@ $endif$
 \renewcommand{\listfigurename}{圖目錄}
 \renewcommand{\listtablename}{表目錄}
 
-% === 章標題格式:置中、加粗、加上「第 X 章」前綴 ===
+% ============================================================
+% === NSTC 大專生報告章節格式(對齊國科會 Word 範本) ===
+% 與一般學位論文不同:
+% - 章標題與本文同字級、不粗體、左對齊縮排 2em
+% - 章序使用中文數字「第一章」「第二章」(\zhnum)
+% - 節、小節、第四層皆同字級不粗體
+% ============================================================
 \titleformat{\section}
-  {\centering\Large\bfseries}
-  {第\arabic{section}章}{1em}{}
-\titlespacing*{\section}{0pt}{0pt}{24pt}
+  {\normalsize}
+  {第\zhnum{section}章}{1em}{}
+\titlespacing*{\section}{2em}{12pt}{6pt}
 
-% === 節標題格式 ===
 \titleformat{\subsection}
-  {\large\bfseries}
-  {\arabic{section}.\arabic{subsection}}{1em}{}
-\titlespacing*{\subsection}{0pt}{18pt}{6pt}
+  {\normalsize}
+  {\thesubsection}{1em}{}
+\titlespacing*{\subsection}{2em}{6pt}{6pt}
 
-% === 小節標題格式 ===
 \titleformat{\subsubsection}
-  {\normalsize\bfseries}
+  {\normalsize}
   {\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}{1em}{}
-\titlespacing*{\subsubsection}{0pt}{12pt}{6pt}
+\titlespacing*{\subsubsection}{2em}{6pt}{6pt}
 
-% === 第四層標題格式 ===
 \titleformat{\paragraph}
-  {\normalsize\bfseries}
+  {\normalsize}
   {\arabic{section}.\arabic{subsection}.\arabic{subsubsection}.\arabic{paragraph}}{1em}{}
-\titlespacing*{\paragraph}{0pt}{12pt}{6pt}
+\titlespacing*{\paragraph}{2em}{6pt}{6pt}
+
+% === 目錄/圖目錄/表目錄頁面標題:置中、大字、粗體(取代預設的 \section*) ===
+\makeatletter
+\renewcommand\tableofcontents{%
+  \begin{center}{\Large\bfseries\contentsname}\end{center}%
+  \vspace{1em}%
+  \@starttoc{toc}%
+}
+\renewcommand\listoffigures{%
+  \begin{center}{\Large\bfseries\listfigurename}\end{center}%
+  \vspace{1em}%
+  \@starttoc{lof}%
+}
+\renewcommand\listoftables{%
+  \begin{center}{\Large\bfseries\listtablename}\end{center}%
+  \vspace{1em}%
+  \@starttoc{lot}%
+}
+\makeatother
+
+% === TOC 章節顯示「第X章」前綴;子節仍用阿拉伯數字(不繼承 \thesection) ===
+\renewcommand{\thesection}{第\zhnum{section}章}
+\renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
+
+% === TOC 各層級寬度:第一層留 4.5em 給「第X章」,第二/三層依層級縮排 ===
+\makeatletter
+\renewcommand*\l@section{\@dottedtocline{1}{0em}{4.5em}}
+\renewcommand*\l@subsection{\@dottedtocline{2}{4.5em}{3em}}
+\renewcommand*\l@subsubsection{\@dottedtocline{3}{7.5em}{4em}}
+\makeatother
+
+% === 圖目錄/表目錄條目加「圖」「表」前綴 ===
+\titlecontents{figure}
+  [0em]
+  {}
+  {\contentslabel[圖 \thecontentslabel]{4.5em}}
+  {}
+  {\titlerule*[0.5pc]{.}\contentspage}
+\titlecontents{table}
+  [0em]
+  {}
+  {\contentslabel[表 \thecontentslabel]{4.5em}}
+  {}
+  {\titlerule*[0.5pc]{.}\contentspage}
 
 % === 頁碼樣式 ===
 \fancypagestyle{frontmatter}{
