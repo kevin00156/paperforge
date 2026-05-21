@@ -1,0 +1,15 @@
+name: report-nstc-undergrad
+type: report
+style: nstc-undergrad
+description: |
+  國科會（NSTC）大專學生研究計畫成果報告格式。
+  封面採國科會制式（外封 + 內封），無英文摘要、無致謝、無學位論文相關頁，
+  圖表編號為「章-序號」型式（如圖 1-1、表 3-2）。
+language: zh-TW
+template: template.latex
+skeleton: skeleton/
+skill: skill/SKILL.md
+defaults:
+  bib-style: ieee
+  pdf-engine: xelatex
+  csl: shared/cites/ieee.csl
