@@ -1,4 +1,6 @@
 ---
+profile: report-nstc-undergrad  # PaperForge 編譯時自動套用此 profile（可被 CLI --profile 覆寫）
+
 # ============================================================
 # === 國科會大專學生研究計畫成果報告基本資訊 ===
 # === 請替換以下 placeholder ===

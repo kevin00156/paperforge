@@ -41,6 +41,7 @@ git commit -m "Initial commit from template"
 
 ```yaml
 ---
+profile: thesis-ncu                   # PaperForge 編譯時自動套用此 profile（skeleton 已預填）
 thesis-title-zh: "你的論文中文題目"
 thesis-title-en: "Your Thesis English Title"
 department: "機械工程學系"          # 改成你的系所

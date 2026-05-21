@@ -15,7 +15,7 @@ PaperForge 是「Markdown → 格式精準 PDF」的鍛造工具鏈本身的開�
   - `template.latex`：Pandoc LaTeX 模板
   - `skeleton/`：使用者 `cp -r` 當論文／報告起點的骨架
   - `skill/SKILL.md`：Claude Code Skill 撰寫規範
-- 編譯：`build.{ps1,sh} --profile <name>`（預設 `thesis-ncu`）
+- 編譯：`build.{ps1,sh}` — profile 套用優先序為 **CLI 旗標 `--profile <name>` > 輸入檔 YAML frontmatter 的 `profile:` 欄位 > 預設 `thesis-ncu`**
 - 範例：`examples/minimal`、`examples/full`
 
 **簡報 type（Marp）**：
@@ -25,7 +25,7 @@ PaperForge 是「Markdown → 格式精準 PDF」的鍛造工具鏈本身的開�
   - `theme.css`：Marp 主題 CSS
   - `skeleton/`：使用者 `cp -r` 當簡報起點（含 `slides.md`、`assets/`、個人化的 `theme.css` override）
   - `skill/SKILL.md`：Claude Code Skill 撰寫規範
-- 編譯：`build-slides.{ps1,sh} --profile <name>`（預設 `slides-ncu`）
+- 編譯：`build-slides.{ps1,sh}` — profile 套用優先序同上（YAML `profile:` 欄位寫在 `slides.md` 開頭即可），預設 `slides-ncu`
 - 範例：`examples/slides-minimal`
 
 **共用**：
@@ -34,6 +34,8 @@ PaperForge 是「Markdown → 格式精準 PDF」的鍛造工具鏈本身的開�
 - 教學文件：`docs/01` ~ `docs/06`
 
 **Profile 命名慣例**：`<type>-<style>`。type 來自 profile.yaml 的 `type:` 欄位（`thesis` / `journal` / `report` / `slides` / 未來新增）。style 是學校／期刊／機關識別。
+
+**Profile 偵測（重要）**：build script 不再硬寫單一預設 profile。當使用者沒帶 `--profile` 旗標時（例：VS Code `ctrl+shift+b`，task 只傳 `${file}`），build script 會解析輸入 `.md` 開頭的 YAML frontmatter 並讀取 `profile:` 欄位；解析失敗或欄位不存在時，才落到預設 `thesis-ncu`（論文）/ `slides-ncu`（簡報）。**因此所有 skeleton 與 examples 都應在 YAML 開頭顯式寫出 `profile: <name>`**，使用者複製後也應保留此欄位。
 
 **抽象層 vs profile 內容（重要）**：
 PaperForge 是「殼／框架」 — 負責 profile 載入、build pipeline、跨平台安裝、CI 等共用機制。

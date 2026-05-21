@@ -228,9 +228,9 @@ program: "光機電工程碩士學位學程"
 1. `cp -r profiles/thesis-ncu profiles/thesis-myschool`
 2. 修改 `profiles/thesis-myschool/profile.yaml` 的 name、style、description
 3. 修改 `profiles/thesis-myschool/template.latex` 的封面 macro 預設值（`\UniversityZh` 等）
-4. 修改 `profiles/thesis-myschool/skeleton/paper.md` 的封面 raw LaTeX 區塊（`\Spaced` 字距、字級、版面）
+4. 修改 `profiles/thesis-myschool/skeleton/paper.md` 的封面 raw LaTeX 區塊（`\Spaced` 字距、字級、版面）；別忘了把開頭 `profile:` 欄位也改成 `thesis-myschool`，使用者複製 skeleton 後不必帶 `--profile` 旗標就能編譯
 5. 修改 `profiles/thesis-myschool/skill/SKILL.md` 中的字型/格式規範
-6. `./scripts/build.sh paper.md --profile thesis-myschool` 測試
+6. `./scripts/build.sh paper.md --profile thesis-myschool` 測試（或在 `paper.md` YAML 寫 `profile: thesis-myschool` 後直接 `./scripts/build.sh paper.md`）
 
 歡迎 PR 加入新學校 profile！
 

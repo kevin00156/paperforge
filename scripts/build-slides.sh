@@ -11,7 +11,8 @@
 #   --html             輸出 HTML
 #   --watch            監看模式（搭配 --html / --pdf 使用）
 #   --output DIR       輸出目錄（預設為輸入檔目錄）
-#   --profile <name>   Profile 名稱（預設 slides-ncu，對應 profiles/<name>/）
+#   --profile <name>   Profile 名稱。優先序：CLI 旗標 > 輸入檔 YAML 的
+#                      profile: 欄位 > 預設 slides-ncu。對應 profiles/<name>/。
 #   --theme FILE       主題 CSS（覆寫 --profile 推導出的 theme.css）
 #   --verbose          詳細輸出
 #   -h, --help         說明
@@ -40,9 +41,27 @@ WATCH=false
 VERBOSE=false
 OUTPUT=""
 PROFILE="slides-ncu"
+PROFILE_FROM_CLI=false
 THEME=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# --- 讀取 Markdown 檔開頭 YAML frontmatter 的 profile: 欄位 ---
+read_yaml_profile() {
+    local file="$1"
+    [[ -f "$file" ]] || return 0
+    awk '
+        BEGIN { fm = 0 }
+        /^---[[:space:]]*$/ { fm++; if (fm > 1) exit; next }
+        fm == 1 && /^profile[[:space:]]*:/ {
+            sub(/^profile[[:space:]]*:[[:space:]]*/, "")
+            sub(/[[:space:]]+#.*$/, "")
+            gsub(/^["\047]|["\047]$/, "")
+            print
+            exit
+        }
+    ' "$file"
+}
 
 # --- 解析參數 ---
 while [[ $# -gt 0 ]]; do
@@ -52,7 +71,7 @@ while [[ $# -gt 0 ]]; do
         --watch)   WATCH=true; shift ;;
         --verbose) VERBOSE=true; shift ;;
         --output)  OUTPUT="$2"; shift 2 ;;
-        --profile) PROFILE="$2"; shift 2 ;;
+        --profile) PROFILE="$2"; PROFILE_FROM_CLI=true; shift 2 ;;
         --theme)   THEME="$2"; shift 2 ;;
         -h|--help)
             sed -n '/^# 用法/,/^# ===/p' "$0" | sed 's/^# \?//'
@@ -71,6 +90,22 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# --- 預設輸入（提前到 Profile 解析之前，這樣才能讀 YAML） ---
+if [[ -z "$INPUT" ]]; then
+    if [[ -f "slides.md" ]]; then
+        INPUT="slides.md"
+    fi
+fi
+
+# 若 CLI 沒指定 --profile，嘗試從輸入檔的 YAML frontmatter 讀 profile: 欄位
+if [[ "$PROFILE_FROM_CLI" != "true" ]] && [[ -f "$INPUT" ]]; then
+    yaml_profile="$(read_yaml_profile "$INPUT")"
+    if [[ -n "$yaml_profile" ]]; then
+        PROFILE="$yaml_profile"
+        log_info "從 YAML frontmatter 偵測到 profile：$PROFILE"
+    fi
+fi
+
 # --- Profile 解析 ---
 PROFILE_DIR="${REPO_ROOT}/profiles/${PROFILE}"
 if [[ ! -d "$PROFILE_DIR" ]]; then
@@ -81,14 +116,9 @@ if [[ -z "$THEME" ]]; then
     THEME="${PROFILE_DIR}/theme.css"
 fi
 
-# --- 預設輸入 ---
 if [[ -z "$INPUT" ]]; then
-    if [[ -f "slides.md" ]]; then
-        INPUT="slides.md"
-    else
-        log_error "未指定輸入檔案，且當前目錄無 slides.md"
-        exit 1
-    fi
+    log_error "未指定輸入檔案，且當前目錄無 slides.md"
+    exit 1
 fi
 
 if [[ ! -f "$INPUT" ]]; then

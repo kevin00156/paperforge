@@ -339,6 +339,8 @@ Howard 等人[@howard2019mobilenetv3]提出 MobileNetV3，採用神經架構搜�
 
 ```yaml
 ---
+profile: report-nstc-undergrad     # PaperForge 編譯時自動套用此 profile
+
 # === 國科會大專生計畫基本資訊 ===
 project-title-zh: "計畫中文名稱"
 project-title-en: "Project Title in English"

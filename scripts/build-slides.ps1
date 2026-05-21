@@ -20,7 +20,8 @@
     監看模式：偵測檔案變動自動重編。
 
 .PARAMETER ProfileName
-    Profile 名稱（對應 profiles/<name>/）。預設 slides-ncu。
+    Profile 名稱。優先序：CLI 旗標 > 輸入檔 YAML 的 profile: 欄位 >
+    預設 slides-ncu。對應 profiles/<name>/。
     例：slides-ncu、slides-ntu（未來新增）。
 
 .PARAMETER Theme
@@ -89,19 +90,36 @@ function Invoke-Native {
 $ScriptDir = Split-Path -Parent $PSCommandPath
 $RepoRoot = Split-Path -Parent $ScriptDir
 
-# --- Profile 解析 ---
-$ProfileDir = Join-Path $RepoRoot "profiles\$ProfileName"
-if (-not (Test-Path $ProfileDir)) {
-    Write-ErrorMsg "找不到 profile：$ProfileName（預期目錄：$ProfileDir）"
-    exit 1
+# 是否由 CLI 顯式指定 -ProfileName（用 -Profile 別名也算）
+$ProfileFromCli = $PSBoundParameters.ContainsKey('ProfileName')
+
+# --- 讀取 Markdown 檔開頭 YAML frontmatter 的 profile: 欄位 ---
+function Read-YamlProfile {
+    param([string]$File)
+    if (-not (Test-Path $File)) { return "" }
+    $sawStart = $false
+    $inFm = $false
+    foreach ($line in Get-Content -LiteralPath $File -Encoding UTF8) {
+        if ($line -match '^---\s*$') {
+            if (-not $sawStart) {
+                $sawStart = $true
+                $inFm = $true
+                continue
+            } else {
+                break
+            }
+        }
+        if ($inFm -and $line -match '^profile\s*:\s*(.+?)\s*$') {
+            $val = $Matches[1]
+            $val = $val -replace '\s+#.*$', ''
+            $val = $val -replace '^[''"]|[''"]$', ''
+            return $val.Trim()
+        }
+    }
+    return ""
 }
 
-# --- 主題預設值（由 profile 推導，可被 -Theme 覆寫） ---
-if (-not $Theme) {
-    $Theme = Join-Path $ProfileDir "theme.css"
-}
-
-# --- 預設輸入 ---
+# --- 預設輸入（提前到 Profile 解析之前，這樣才能讀 YAML） ---
 if (-not $InputFile) {
     if (Test-Path "slides.md") {
         $InputFile = "slides.md"
@@ -115,6 +133,27 @@ if (-not $InputFile) {
 if (-not (Test-Path $InputFile)) {
     Write-ErrorMsg "找不到輸入檔案：$InputFile"
     exit 1
+}
+
+# 若 CLI 沒指定 -ProfileName，嘗試從輸入檔的 YAML frontmatter 讀 profile: 欄位
+if (-not $ProfileFromCli) {
+    $yamlProfile = Read-YamlProfile -File $InputFile
+    if ($yamlProfile) {
+        $ProfileName = $yamlProfile
+        Write-Info "從 YAML frontmatter 偵測到 profile：$ProfileName"
+    }
+}
+
+# --- Profile 解析 ---
+$ProfileDir = Join-Path $RepoRoot "profiles\$ProfileName"
+if (-not (Test-Path $ProfileDir)) {
+    Write-ErrorMsg "找不到 profile：$ProfileName（預期目錄：$ProfileDir）"
+    exit 1
+}
+
+# --- 主題預設值（由 profile 推導，可被 -Theme 覆寫） ---
+if (-not $Theme) {
+    $Theme = Join-Path $ProfileDir "theme.css"
 }
 
 if (-not (Test-Path $Theme)) {

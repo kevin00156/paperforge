@@ -19,7 +19,8 @@
 #   --no-bib           跳過 biber
 #   --keep-tex         保留 .tex 中間檔
 #   --engine xelatex|lualatex   PDF 引擎（預設 xelatex）
-#   --profile <name>   Profile 名稱（預設 thesis-ncu，對應 profiles/<name>/）
+#   --profile <name>   Profile 名稱。優先序：CLI 旗標 > 輸入檔 YAML 的
+#                      profile: 欄位 > 預設 thesis-ncu。對應 profiles/<name>/。
 #   --template <path>  指定模板（覆寫 --profile 推導出的路徑）
 #   --bib-style <name> biblatex 樣式（預設 ieee）
 #   --verbose          詳細輸出
@@ -61,6 +62,7 @@ ENGINE="xelatex"
 VERBOSE=false
 BIB_STYLE="ieee"
 PROFILE="thesis-ncu"
+PROFILE_FROM_CLI=false
 TEMPLATE=""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -74,7 +76,7 @@ while [[ $# -gt 0 ]]; do
         --no-bib) NO_BIB=true; shift ;;
         --keep-tex) KEEP_TEX=true; shift ;;
         --engine) ENGINE="$2"; shift 2 ;;
-        --profile) PROFILE="$2"; shift 2 ;;
+        --profile) PROFILE="$2"; PROFILE_FROM_CLI=true; shift 2 ;;
         --template) TEMPLATE="$2"; shift 2 ;;
         --bib-style) BIB_STYLE="$2"; shift 2 ;;
         --verbose|-v) VERBOSE=true; shift ;;
@@ -83,6 +85,24 @@ while [[ $# -gt 0 ]]; do
         *) INPUT="$1"; shift ;;
     esac
 done
+
+# --- 讀取 Markdown 檔開頭 YAML frontmatter 的 profile: 欄位 ---
+# 若沒有 frontmatter 或 profile 欄位則回傳空字串
+read_yaml_profile() {
+    local file="$1"
+    [[ -f "$file" ]] || return 0
+    awk '
+        BEGIN { fm = 0 }
+        /^---[[:space:]]*$/ { fm++; if (fm > 1) exit; next }
+        fm == 1 && /^profile[[:space:]]*:/ {
+            sub(/^profile[[:space:]]*:[[:space:]]*/, "")
+            sub(/[[:space:]]+#.*$/, "")
+            gsub(/^["\047]|["\047]$/, "")
+            print
+            exit
+        }
+    ' "$file"
+}
 
 # --- 自動偵測：根據檔名分派至 paper 或 slides 編譯流程 ---
 detect_build_mode() {
@@ -161,14 +181,24 @@ if [[ "$BUILD_MODE" == "slides" ]]; then
         exit 1
     fi
     pass_args=()
-    [[ -n "$INPUT" ]]          && pass_args+=("$INPUT")
-    [[ -n "$OUTPUT_DIR" ]]     && pass_args+=("--output" "$OUTPUT_DIR")
-    [[ "$WATCH" == "true" ]]   && pass_args+=("--watch")
-    [[ "$VERBOSE" == "true" ]] && pass_args+=("--verbose")
+    [[ -n "$INPUT" ]]                        && pass_args+=("$INPUT")
+    [[ -n "$OUTPUT_DIR" ]]                   && pass_args+=("--output" "$OUTPUT_DIR")
+    [[ "$WATCH" == "true" ]]                 && pass_args+=("--watch")
+    [[ "$VERBOSE" == "true" ]]               && pass_args+=("--verbose")
+    [[ "$PROFILE_FROM_CLI" == "true" ]]      && pass_args+=("--profile" "$PROFILE")
     exec bash "$SLIDES_SCRIPT" "${pass_args[@]}"
 fi
 
 # --- 以下為 paper 模式 ---
+
+# 若 CLI 沒指定 --profile，嘗試從輸入檔的 YAML frontmatter 讀 profile: 欄位
+if [[ "$PROFILE_FROM_CLI" != "true" ]] && [[ -f "$INPUT" ]]; then
+    yaml_profile="$(read_yaml_profile "$INPUT")"
+    if [[ -n "$yaml_profile" ]]; then
+        PROFILE="$yaml_profile"
+        log_info "從 YAML frontmatter 偵測到 profile：$PROFILE"
+    fi
+fi
 
 # Profile → template/CSL 路徑解析（--template 可覆寫）
 PROFILE_DIR="${REPO_ROOT}/profiles/${PROFILE}"

@@ -1,4 +1,6 @@
 ---
+profile: thesis-ncu
+
 # === NCU 論文最小範例 ===
 # 此範例僅含必要結構，用於驗證編譯環境。
 # 注意：CI 環境（GitHub Actions Ubuntu runner）沒有「標楷體」，
