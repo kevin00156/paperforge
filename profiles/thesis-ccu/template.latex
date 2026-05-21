@@ -474,6 +474,108 @@ $endfor$
 \let\LanguageShortHands\languageshorthands
 \def\languageshorthands#1{}
 $endif$
+% ============================================================
+% === CCU 論文 profile 預設 LaTeX 設定 ===
+% 這些設定原本被複製在每份 skeleton/paper.md 的 header-includes 區塊;
+% 收進 template 後,使用者複製 skeleton 不需再帶這坨 LaTeX,
+% profile 升級後既有論文也會自動跟進。
+% 使用者 YAML 中的 header-includes 會在這之後 append,可 override 此處任何一條。
+% ============================================================
+\usepackage{titlesec}
+\usepackage{makecell}
+\usepackage{indentfirst}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{colortbl}
+\usepackage{zhnumber}
+
+% === 圖表位置:偏好原位,允許少量浮動 ===
+\floatplacement{figure}{!htbp}
+\floatplacement{table}{!htbp}
+
+% === 公式:靠左 + 全文連續編號(CCU 風格 (1), (2), ...) ===
+\setlength{\mathindent}{0pt}
+
+% === 超連結設定 ===
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+% === 首行縮排 2 字元 ===
+\setlength{\parindent}{2em}
+
+% === 圖表標題置中、名稱中文化(CCU 風格:圖N. 標題 / 表N. 標題) ===
+\captionsetup{justification=centering}
+\captionsetup[figure]{name={圖},labelsep=period}
+\captionsetup[table]{name={表},labelsep=period}
+
+% === 目錄/圖目錄/表目錄標題 ===
+\renewcommand{\contentsname}{目錄}
+\renewcommand{\listfigurename}{圖目錄}
+\renewcommand{\listtablename}{表目錄}
+
+% === 章節編號(CCU 風格:第一章 中文數字;節以下用阿拉伯) ===
+\renewcommand{\thesection}{\zhnumber{\value{section}}}
+\renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
+
+% === 章標題格式:置中、加粗、加上「第X章」前綴(中文數字) ===
+\titleformat{\section}
+  {\centering\Large\bfseries}
+  {第\zhnumber{\value{section}}章}{1em}{}
+\titlespacing*{\section}{0pt}{0pt}{24pt}
+
+% === 節標題格式 ===
+\titleformat{\subsection}
+  {\large\bfseries}
+  {\arabic{section}.\arabic{subsection}}{1em}{}
+\titlespacing*{\subsection}{0pt}{18pt}{6pt}
+
+% === 小節標題格式 ===
+\titleformat{\subsubsection}
+  {\normalsize\bfseries}
+  {\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}{1em}{}
+\titlespacing*{\subsubsection}{0pt}{12pt}{6pt}
+
+% === 第四層標題格式 ===
+\titleformat{\paragraph}
+  {\normalsize\bfseries}
+  {\arabic{section}.\arabic{subsection}.\arabic{subsubsection}.\arabic{paragraph}}{1em}{}
+\titlespacing*{\paragraph}{0pt}{12pt}{6pt}
+
+% === 頁碼樣式 ===
+\fancypagestyle{frontmatter}{
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+\fancypagestyle{mainmatter}{
+  \fancyhf{}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+% === 左右對齊 ===
+\usepackage{ragged2e}
+\justifying
+\setlength{\emergencystretch}{3em}
+
+% === 技術識別符允許在底線處換行;math mode 內保留原行為,避免 \mathit{a\_b} 之類爆掉 ===
+\let\paperforgeOrigUnderscore\_
+\renewcommand{\_}{\ifmmode\paperforgeOrigUnderscore\else\textunderscore\allowbreak\fi}
+
+% === 實驗數據變數套件(在 paper.md 用 \def\xxx{値} + \FPeval 集中管理數字) ===
+\usepackage{fp}
+
+% === 使用者 YAML header-includes(可 override 上方任何一條) ===
 $for(header-includes)$
 $header-includes$
 $endfor$
