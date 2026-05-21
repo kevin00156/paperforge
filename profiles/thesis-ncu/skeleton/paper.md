@@ -51,105 +51,19 @@ secnumdepth: 4                    # 編號最深到 #### 第四層
 toc: false                        # 手動插入 \tableofcontents
 
 # ============================================================
-# === LaTeX 標題格式、頁碼、超連結等進階設定 ===
+# === 自訂 LaTeX 設定 ===
+# 大部分章節格式、頁碼、超連結、圖表編號等已由 profile thesis-ncu 的
+# template.latex 提供，無需在此重抄。如需 override 或新增實驗數據變數，
+# 可加 header-includes 區塊（會 append 在 profile 預設之後）：
+#
+# header-includes:
+#   - |
+#     ```{=latex}
+#     \def\experimentTotal{1000}
+#     \def\experimentCorrect{950}
+#     \FPeval{\experimentAccuracy}{round(\experimentCorrect/\experimentTotal*100:2)}
+#     ```
 # ============================================================
-header-includes:
-  - |
-    ```{=latex}
-    \usepackage{titlesec}
-    \usepackage{makecell}
-    \usepackage{indentfirst}
-    \usepackage{fancyhdr}
-    \usepackage{graphicx}
-    \usepackage{caption}
-    \usepackage{hyperref}
-    \usepackage{xcolor}
-    \usepackage{float}
-    \usepackage{longtable}
-    \usepackage{colortbl}
-
-    % === 圖表位置：偏好原位，允許少量浮動 ===
-    \floatplacement{figure}{!htbp}
-    \floatplacement{table}{!htbp}
-
-    % === 公式：靠左 + 自動編號 (節號-公式號) ===
-    \setlength{\mathindent}{0pt}
-    \numberwithin{equation}{section}
-    \renewcommand{\theequation}{\arabic{section}-\arabic{equation}}
-
-    % === 超連結設定 ===
-    \hypersetup{
-      colorlinks=true,
-      linkcolor=black,
-      citecolor=blue,
-      urlcolor=blue
-    }
-
-    % === 首行縮排 2 字元 ===
-    \setlength{\parindent}{2em}
-
-    % === 圖表標題置中，名稱中文化 ===
-    \captionsetup{justification=centering}
-    \captionsetup[figure]{name={圖},labelsep=space}
-    \captionsetup[table]{name={表},labelsep=space}
-
-    % === 目錄/圖目錄/表目錄標題 ===
-    \renewcommand{\contentsname}{目錄}
-    \renewcommand{\listfigurename}{圖目錄}
-    \renewcommand{\listtablename}{表目錄}
-
-    % === 章標題格式：置中、加粗、加上「第 X 章」前綴 ===
-    \titleformat{\section}
-      {\centering\Large\bfseries}
-      {第\arabic{section}章}{1em}{}
-    \titlespacing*{\section}{0pt}{0pt}{24pt}
-
-    % === 節標題格式 ===
-    \titleformat{\subsection}
-      {\large\bfseries}
-      {\arabic{section}.\arabic{subsection}}{1em}{}
-    \titlespacing*{\subsection}{0pt}{18pt}{6pt}
-
-    % === 小節標題格式 ===
-    \titleformat{\subsubsection}
-      {\normalsize\bfseries}
-      {\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}{1em}{}
-    \titlespacing*{\subsubsection}{0pt}{12pt}{6pt}
-
-    % === 第四層標題格式 ===
-    \titleformat{\paragraph}
-      {\normalsize\bfseries}
-      {\arabic{section}.\arabic{subsection}.\arabic{subsubsection}.\arabic{paragraph}}{1em}{}
-    \titlespacing*{\paragraph}{0pt}{12pt}{6pt}
-
-    % === 頁碼樣式 ===
-    \fancypagestyle{frontmatter}{
-      \fancyhf{}
-      \fancyfoot[C]{\thepage}
-      \renewcommand{\headrulewidth}{0pt}
-    }
-    \fancypagestyle{mainmatter}{
-      \fancyhf{}
-      \fancyfoot[C]{\thepage}
-      \renewcommand{\headrulewidth}{0pt}
-    }
-
-    % === 左右對齊 ===
-    \usepackage{ragged2e}
-    \justifying
-    \setlength{\emergencystretch}{3em}
-
-    % === 技術識別符允許在底線處換行；math mode 內保留原行為，避免 \mathit{a\_b} 之類爆掉 ===
-    \let\paperforgeOrigUnderscore\_
-    \renewcommand{\_}{\ifmmode\paperforgeOrigUnderscore\else\textunderscore\allowbreak\fi}
-
-    % === 實驗數據變數（在此集中管理，全文自動更新） ===
-    \usepackage{fp}
-    % 範例：
-    % \def\experimentTotal{1000}
-    % \def\experimentCorrect{950}
-    % \FPeval{\experimentAccuracy}{round(\experimentCorrect/\experimentTotal*100:2)}
-    ```
 ---
 
 <!-- ============================================================ -->
