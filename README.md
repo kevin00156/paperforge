@@ -13,13 +13,9 @@
 
 PaperForge 是一套以 **Markdown + Pandoc + XeLaTeX** 為核心的「文件鍛造」工作鏈，給需要產出**格式絕對正確**的專業文件使用：學位論文、期刊投稿、政府報告書、技術白皮書等。圖、表、引用、目錄、交叉參照全部走 LaTeX 自動編號，封面字距與裝幀細節由 profile 模板掌控。
 
+PaperForge並沒有新寫任何的新工具，僅提供一個框架，整合所有工具鏈，以保證此專案的穩定性。
+
 同一份原稿還能順帶鍛出口試／工作會議用的 **Marp 簡報**（PDF / HTML），共用一套版本控制與資產目錄。
-
-**目前內建 profile**：
-
-- `thesis-ncu` — 國立中央大學碩博士學位論文（首發、規範最完整）
-
-未來擴充走 `profiles/<type>-<style>/` 結構：例如 `journal-ieee`、`report-gov-tw` 等。
 
 ---
 
@@ -265,7 +261,7 @@ A: Claude Code 是 Anthropic 的官方 CLI 工具；Skill 是讓 Claude 熟悉�
 
 ### Q: 我不用 Claude Code 也可以用這套工作流嗎？
 
-A: 完全可以。Skill 是可選的；核心的 Pandoc + LaTeX 編譯工作流獨立運作。
+A: 完全可以。Skill 是可選的；核心的 Pandoc + LaTeX 編譯工作流獨立運作。就算你純手寫或用ChatGPT的Codex也行。*千萬別用Gemini，智商不足*
 
 ---
 
