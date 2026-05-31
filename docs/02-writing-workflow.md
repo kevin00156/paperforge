@@ -1,30 +1,43 @@
 # 02 — 寫作流程指南
 
-本文件說明從零開始撰寫一份 NCU 論文的完整工作流。
+本文件說明從零開始撰寫一份論文 / 報告的完整工作流。流程與 profile 無關；下方以
+`<profile>` 代表你選定的 profile 名稱（例 `thesis-ncu`、`thesis-ccu`、
+`report-nstc-undergrad`），實際清單請以 `--list-profiles` 為準。
 
 ## 整體流程
 
 ```
-1. 複製 profiles/thesis-ncu/skeleton/ 為自己的論文資料夾
+1. 用 --list-profiles 選定 profile，複製 profiles/<profile>/skeleton/ 為自己的資料夾
 2. 設定 Zotero 自動匯出 references.bib
 3. 編輯 paper.md（YAML metadata + 章節內容）
 4. 邊寫邊用 scripts/build.sh / scripts/build.ps1 編譯預覽
 5. 完稿後用監看模式作最後校對
 ```
 
-## Step 1：建立論文資料夾
+## Step 1：選定 profile 並建立資料夾
 
-從對應 profile 的 `skeleton/` 複製出來（NCU 學位論文使用 `thesis-ncu`）：
+先看目前支援哪些 profile（自動枚舉，不必硬背名單）：
+
+```bash
+./scripts/build.sh --list-profiles      # Linux/macOS（Windows 用 -ListProfiles，或 make list-profiles）
+```
+
+挑好之後，把對應 profile 的 `skeleton/` 複製出來（把 `<profile>` 換成你選的名稱）：
 
 ```bash
 # Linux/macOS
-cp -r profiles/thesis-ncu/skeleton/ my-thesis/
+cp -r profiles/<profile>/skeleton/ my-thesis/
 
 # Windows PowerShell
-Copy-Item -Recurse profiles\thesis-ncu\skeleton my-thesis
+Copy-Item -Recurse profiles\<profile>\skeleton my-thesis
 ```
 
 可以放在 PaperForge repo 內，或獨立目錄都可以（編譯時注意路徑即可）。
+
+> **profile 怎麼套用？** 每份 skeleton 的 `paper.md` / `slides.md` 開頭 YAML 已預填
+> `profile: <profile>` 欄位，編譯時自動套用對應格式。優先序為
+> **CLI 旗標 `--profile <name>` > 輸入檔 YAML 的 `profile:` 欄位 > 預設**，所以一般
+> 情況保留 skeleton 預填的欄位即可，不必每次帶旗標。換 profile 時改這個欄位（或編譯時帶 `--profile`）就好。
 
 **建議**：把 `my-thesis/` 作為獨立的 Git repo 來追蹤論文修改歷史。
 
