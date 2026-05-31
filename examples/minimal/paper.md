@@ -20,6 +20,7 @@ subfigure: true
 
 geometry: "top=2.5cm, bottom=2.5cm, left=3cm, right=2cm"
 papersize: a4
+classoption: [fleqn]   # 公式靠左對齊（與 NCU skeleton 一致）
 
 # CI / 跨平台用免費字體；本機若要符合 NCU 嚴格規範請改成
 #   mainfont: "Times New Roman"
