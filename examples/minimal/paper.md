@@ -40,53 +40,8 @@ numbersections: true
 secnumdepth: 4
 toc: false
 
-header-includes:
-  - |
-    ```{=latex}
-    \usepackage{titlesec}
-    \usepackage{indentfirst}
-    \usepackage{fancyhdr}
-    \usepackage{graphicx}
-    \usepackage{caption}
-    \usepackage{hyperref}
-    \usepackage{xcolor}
-    \usepackage{float}
-
-    \floatplacement{figure}{!htbp}
-    \floatplacement{table}{!htbp}
-
-    \numberwithin{equation}{section}
-    \renewcommand{\theequation}{\arabic{section}-\arabic{equation}}
-
-    \hypersetup{colorlinks=true, linkcolor=black, citecolor=blue, urlcolor=blue}
-
-    \setlength{\parindent}{2em}
-
-    \captionsetup{justification=centering}
-    \captionsetup[figure]{name={圖},labelsep=space}
-    \captionsetup[table]{name={表},labelsep=space}
-
-    \renewcommand{\contentsname}{目錄}
-
-    \titleformat{\section}
-      {\centering\Large\bfseries}
-      {第\arabic{section}章}{1em}{}
-    \titlespacing*{\section}{0pt}{0pt}{24pt}
-
-    \titleformat{\subsection}
-      {\large\bfseries}
-      {\arabic{section}.\arabic{subsection}}{1em}{}
-
-    \fancypagestyle{mainmatter}{
-      \fancyhf{}
-      \fancyfoot[C]{\thepage}
-      \renewcommand{\headrulewidth}{0pt}
-    }
-
-    \usepackage{ragged2e}
-    \justifying
-    \setlength{\emergencystretch}{3em}
-    ```
+# 章節格式、圖表標題、頁碼、超連結等 LaTeX 設定皆由 profile thesis-ncu 的
+# template.latex 提供，使用者複製後不需在此重抄；本範例僅保留資料欄位。
 ---
 
 <!-- ============================================================ -->

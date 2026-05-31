@@ -389,9 +389,28 @@ if ($failCount -gt 0) {
 Write-Host "🎉 安裝完成！" -ForegroundColor Green
 Write-Host ""
 Write-Host "下一步："
-Write-Host "  1. 複製論文骨架（選一個 profile）："
-Write-Host "       Copy-Item -Recurse profiles\thesis-ncu\skeleton my-thesis    # 國立中央大學"
-Write-Host "       Copy-Item -Recurse profiles\thesis-ccu\skeleton my-thesis    # 國立中正大學"
-Write-Host "  2. 編輯 my-thesis\paper.md 的 YAML metadata"
+Write-Host "  1. 複製骨架（選一個 profile，論文或簡報皆可）："
+# 動態枚舉 profiles/*/profile.yaml，新增 profile 自動出現，無需維護清單。
+Get-ChildItem (Join-Path $ProjectRoot "profiles") -Directory | ForEach-Object {
+    $yaml = Join-Path $_.FullName "profile.yaml"
+    $skel = Join-Path $_.FullName "skeleton"
+    if ((Test-Path $yaml) -and (Test-Path $skel)) {
+        $desc = ""
+        $lines = Get-Content -Path $yaml
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match '^description\s*:\s*(.*)$') {
+                $v = $Matches[1].Trim().Trim('"').Trim("'")
+                if ($v -eq '|' -or $v -eq '>' -or $v -eq '') {
+                    if ($i + 1 -lt $lines.Count) { $desc = $lines[$i + 1].Trim().Trim('"').Trim("'") }
+                } else { $desc = $v }
+                break
+            }
+        }
+        Write-Host ("       Copy-Item -Recurse profiles\{0}\skeleton my-work    # {1}" -f $_.Name, $desc)
+    }
+}
+Write-Host "     （完整清單與細節：.\scripts\build.ps1 --list-profiles）"
+Write-Host "  2. 編輯 my-work\paper.md（簡報為 slides.md）的 YAML metadata"
 Write-Host "  3. 設置 Zotero：見 docs\03-zotero-setup.md"
-Write-Host "  4. 編譯論文：.\scripts\build.ps1 my-thesis\paper.md --profile thesis-ncu  # 或 thesis-ccu"
+Write-Host "  4. 編譯：.\scripts\build.ps1 my-work\paper.md --profile <name>"
+Write-Host "       （簡報改用 .\scripts\build-slides.ps1 my-work\slides.md --profile <name>）"

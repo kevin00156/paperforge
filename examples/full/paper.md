@@ -37,71 +37,12 @@ numbersections: true
 secnumdepth: 4
 toc: false
 
+# 章節格式、圖表標題、頁碼、超連結、longtable/multirow/fp 等套件皆由
+# profile thesis-ncu 的 template.latex 提供，不需在此重抄。
+# 此處僅保留本範例專屬的實驗數據變數（內文以 \experimentAccuracy 等引用）。
 header-includes:
   - |
     ```{=latex}
-    \usepackage{titlesec}
-    \usepackage{makecell}
-    \usepackage{indentfirst}
-    \usepackage{fancyhdr}
-    \usepackage{graphicx}
-    \usepackage{caption}
-    \usepackage{hyperref}
-    \usepackage{xcolor}
-    \usepackage{float}
-    \usepackage{longtable}
-    \usepackage{colortbl}
-    \usepackage{multirow}
-
-    \floatplacement{figure}{!htbp}
-    \floatplacement{table}{!htbp}
-
-    \setlength{\mathindent}{0pt}
-    \numberwithin{equation}{section}
-    \renewcommand{\theequation}{\arabic{section}-\arabic{equation}}
-
-    \hypersetup{colorlinks=true, linkcolor=black, citecolor=blue, urlcolor=blue}
-
-    \setlength{\parindent}{2em}
-
-    \captionsetup{justification=centering}
-    \captionsetup[figure]{name={圖},labelsep=space}
-    \captionsetup[table]{name={表},labelsep=space}
-
-    \renewcommand{\contentsname}{目錄}
-    \renewcommand{\listfigurename}{圖目錄}
-    \renewcommand{\listtablename}{表目錄}
-
-    \titleformat{\section}
-      {\centering\Large\bfseries}
-      {第\arabic{section}章}{1em}{}
-    \titlespacing*{\section}{0pt}{0pt}{24pt}
-
-    \titleformat{\subsection}
-      {\large\bfseries}
-      {\arabic{section}.\arabic{subsection}}{1em}{}
-
-    \titleformat{\subsubsection}
-      {\normalsize\bfseries}
-      {\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}{1em}{}
-
-    \fancypagestyle{frontmatter}{
-      \fancyhf{}
-      \fancyfoot[C]{\thepage}
-      \renewcommand{\headrulewidth}{0pt}
-    }
-    \fancypagestyle{mainmatter}{
-      \fancyhf{}
-      \fancyfoot[C]{\thepage}
-      \renewcommand{\headrulewidth}{0pt}
-    }
-
-    \usepackage{ragged2e}
-    \justifying
-    \setlength{\emergencystretch}{3em}
-
-    % 範例變數
-    \usepackage{fp}
     \def\experimentTotal{1000}
     \def\experimentCorrect{952}
     \FPeval{\experimentAccuracy}{round(\experimentCorrect/\experimentTotal*100:2)}
