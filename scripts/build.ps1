@@ -76,6 +76,8 @@ param(
     [switch]$Clean,
     [switch]$NoBib,
     [switch]$KeepTex,
+    [switch]$NoLint,
+    [switch]$LintStrict,
 
     [ValidateSet("xelatex", "lualatex")]
     [string]$Engine = "xelatex",
@@ -353,11 +355,37 @@ if (-not (Test-Path $Template)) {
 }
 
 # --- 編譯函式 ---
+# --- 格式檢查（lint）---
+# 與 CI 共用同一支 scripts/lint.py。預設僅警告、不擋編譯；-LintStrict 才中止。沒有 python 時優雅略過。
+function Invoke-Lint {
+    if ($NoLint) { return }
+    $linter = Join-Path $ScriptDir "lint.py"
+    if (-not (Test-Path $linter)) { return }
+    $py = if (Get-Command python -ErrorAction SilentlyContinue) { "python" }
+          elseif (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" }
+          else { $null }
+    if (-not $py) { Write-WarnMsg "未安裝 python，略過格式檢查（lint）"; return }
+    Write-Info "格式檢查（lint）：$InputAbs"
+    $lintArgs = @($linter)
+    if ($LintStrict) { $lintArgs += "--strict" }
+    $lintArgs += $InputAbs
+    $code = Invoke-Native -Cmd $py -ArgList $lintArgs -ShowOutput
+    if ($code -ne 0) {
+        if ($LintStrict) {
+            Write-ErrorMsg "lint 發現問題（-LintStrict 已啟用，中止編譯）"
+            exit 1
+        }
+        Write-WarnMsg "lint 發現問題（僅警告，繼續編譯；要擋編譯請加 -LintStrict）"
+    }
+}
+
 function Invoke-Build {
     $tmpdir = Join-Path $env:TEMP "paperforge_$([System.IO.Path]::GetRandomFileName())"
     New-Item -ItemType Directory -Path $tmpdir -Force | Out-Null
 
     try {
+        Invoke-Lint
+
         Write-Info "暫存目錄：$tmpdir"
 
         # 複製來源目錄到暫存
