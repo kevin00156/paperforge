@@ -23,6 +23,9 @@
 #                      profile: 欄位 > 預設 thesis-ncu。對應 profiles/<name>/。
 #   --template <path>  指定模板（覆寫 --profile 推導出的路徑）
 #   --bib-style <name> biblatex 樣式（預設 ieee）
+#   --main-font <name> 覆寫西文主字體（-V mainfont，優先於輸入檔 YAML）
+#   --cjk-font <name>  覆寫中文主字體（-V CJKmainfont，優先於輸入檔 YAML）
+#                      用途：CI / 無標楷體的 Linux 改用 Noto 等替代字體
 #   --list-profiles    列出目前可用的 profile（讀 profiles/*/profile.yaml）後結束
 #   --verbose          詳細輸出
 #   -h, --help         顯示此說明
@@ -66,6 +69,8 @@ PROFILE="thesis-ncu"
 PROFILE_FROM_CLI=false
 TEMPLATE=""
 LIST_PROFILES=false
+MAIN_FONT=""
+CJK_FONT=""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -81,6 +86,8 @@ while [[ $# -gt 0 ]]; do
         --profile) PROFILE="$2"; PROFILE_FROM_CLI=true; shift 2 ;;
         --template) TEMPLATE="$2"; shift 2 ;;
         --bib-style) BIB_STYLE="$2"; shift 2 ;;
+        --main-font) MAIN_FONT="$2"; shift 2 ;;
+        --cjk-font) CJK_FONT="$2"; shift 2 ;;
         --list-profiles) LIST_PROFILES=true; shift ;;
         --verbose|-v) VERBOSE=true; shift ;;
         -h|--help) usage 0 ;;
@@ -333,6 +340,11 @@ do_build() {
         --template="template.latex"
         --pdf-engine="$ENGINE"
     )
+    # 字體覆寫：命令列 -V 優先於輸入檔 YAML 的 mainfont / CJKmainfont。
+    # 用途：CI 或無「標楷體」的 Linux 環境可改用 Noto 等替代字體，
+    #       而 skeleton 本身仍保留真實論文字體設定。
+    [[ -n "$MAIN_FONT" ]] && pandoc_args+=(-V "mainfont=$MAIN_FONT")
+    [[ -n "$CJK_FONT"  ]] && pandoc_args+=(-V "CJKmainfont=$CJK_FONT")
     if [[ "$VERBOSE" == "true" ]]; then
         pandoc_args+=(--verbose)
     fi
