@@ -17,6 +17,8 @@
 #   --watch            監看模式
 #   --clean            清理中間檔
 #   --no-bib           跳過 biber
+#   --no-lint          跳過格式檢查（lint）
+#   --lint-strict      格式檢查發現問題即中止編譯（預設僅警告、不擋編譯）
 #   --keep-tex         保留 .tex 中間檔
 #   --engine xelatex|lualatex   PDF 引擎（預設 xelatex）
 #   --profile <name>   Profile 名稱。優先序：CLI 旗標 > 輸入檔 YAML 的
@@ -61,6 +63,8 @@ OUTPUT_DIR=""
 WATCH=false
 CLEAN=false
 NO_BIB=false
+LINT=true
+LINT_STRICT=false
 KEEP_TEX=false
 ENGINE="xelatex"
 VERBOSE=false
@@ -81,6 +85,8 @@ while [[ $# -gt 0 ]]; do
         --watch) WATCH=true; shift ;;
         --clean) CLEAN=true; shift ;;
         --no-bib) NO_BIB=true; shift ;;
+        --no-lint) LINT=false; shift ;;
+        --lint-strict) LINT_STRICT=true; shift ;;
         --keep-tex) KEEP_TEX=true; shift ;;
         --engine) ENGINE="$2"; shift 2 ;;
         --profile) PROFILE="$2"; PROFILE_FROM_CLI=true; shift 2 ;;
@@ -309,8 +315,35 @@ if [[ ! -f "$TEMPLATE" ]]; then
     exit 1
 fi
 
+# --- 格式檢查（lint）---
+# 與 CI 共用同一支 scripts/lint.py，避免規則在 bash/PowerShell/CI 三處抄寫漂移。
+# 預設僅警告、不擋編譯（你仍拿得到 PDF）；--lint-strict 才在發現問題時中止。
+# 沒有 python3 時優雅略過，不讓「檢查器的直譯器缺席」害你編不出 PDF。
+do_lint() {
+    [[ "$LINT" == "true" ]] || return 0
+    local linter="${SCRIPT_DIR}/lint.py"
+    [[ -f "$linter" ]] || return 0
+    if ! command -v python3 &> /dev/null; then
+        log_warn "未安裝 python3，略過格式檢查（lint）"
+        return 0
+    fi
+    log_info "格式檢查（lint）：$INPUT_ABS"
+    local strict_flag=()
+    [[ "$LINT_STRICT" == "true" ]] && strict_flag=(--strict)
+    if python3 "$linter" "${strict_flag[@]}" "$INPUT_ABS"; then
+        return 0
+    fi
+    if [[ "$LINT_STRICT" == "true" ]]; then
+        log_error "lint 發現問題（--lint-strict 已啟用，中止編譯）"
+        exit 1
+    fi
+    log_warn "lint 發現問題（僅警告，繼續編譯；要擋編譯請加 --lint-strict）"
+}
+
 # --- 核心編譯函式 ---
 do_build() {
+    do_lint
+
     local tmpdir
     tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/paperforge.XXXXXX")"
     trap "rm -rf '$tmpdir'" EXIT
