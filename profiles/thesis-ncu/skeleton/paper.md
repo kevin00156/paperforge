@@ -29,7 +29,8 @@ classoption: [fleqn]
 # ============================================================
 # === 字體設定（NCU 嚴格規範） ===
 # ============================================================
-# 若系統無「標楷體」（常見於 Linux/macOS），可改用 "Noto Serif CJK TC" 或 "思源宋體"
+# 若系統無「標楷體」（常見於 Linux/macOS），改用免費楷體 "AR PL UKai TW"（apt: fonts-arphic-ukai）
+# 或國發會「全字庫正楷體」TW-Kai；論文要求楷體，勿用明體（如 Noto Serif）替代
 mainfont: "Times New Roman"
 CJKmainfont: "標楷體"
 fontsize: 12pt

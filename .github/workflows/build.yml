@@ -139,15 +139,23 @@ jobs:
 
       # 自動枚舉每個 paper 類 profile 的 skeleton 並編譯。
       # 新增 profile 時這裡一行都不用改：放進 profiles/<name>/skeleton/paper.md 即受涵蓋。
+      #
+      # skeleton 保留真實論文字體（如標楷體 / Times New Roman），CI 容器沒有這些字體，
+      # 因此用 --main-font / --cjk-font 強制覆寫為容器內的免費替身。
+      # CJK 用「AR PL UKai」免費楷體（非明體），與真實標楷體同為楷體，
+      # 能驗出楷體缺 glyph 問題；這把字體維度對「所有」profile（含未來新增）一次中和。
       - name: Build & verify every profile skeleton (paper)
         shell: bash
+        env:
+          CI_MAIN_FONT: "Latin Modern Roman"
+          CI_CJK_FONT: "AR PL UKai TW"
         run: |
           shopt -s nullglob
           found=0
           for md in profiles/*/skeleton/paper.md; do
             found=$((found + 1))
             echo "::group::build $md"
-            ./scripts/build.sh "$md" --verbose
+            ./scripts/build.sh "$md" --main-font "$CI_MAIN_FONT" --cjk-font "$CI_CJK_FONT" --verbose
             echo "::endgroup::"
             pdf="${md%/paper.md}/paper.pdf"
             if [ ! -f "$pdf" ]; then

@@ -43,6 +43,13 @@
 .PARAMETER BibStyle
     biblatex 樣式名稱。預設 ieee。
 
+.PARAMETER MainFont
+    覆寫西文主字體（-V mainfont，優先於輸入檔 YAML）。
+
+.PARAMETER CjkFont
+    覆寫中文主字體（-V CJKmainfont，優先於輸入檔 YAML）。
+    用途：無標楷體的環境可改用免費楷體（如 "AR PL UKai TW"）。
+
 .PARAMETER ListProfiles
     列出目前可用的 profile（讀 profiles\*\profile.yaml）後結束，不需輸入檔。
 
@@ -78,6 +85,8 @@ param(
 
     [string]$Template = "",
     [string]$BibStyle = "ieee",
+    [string]$MainFont = "",
+    [string]$CjkFont = "",
     [switch]$ListProfiles
 )
 
@@ -380,6 +389,9 @@ function Invoke-Build {
                 "--template=template.latex",
                 "--pdf-engine=$Engine"
             )
+            # 字體覆寫：命令列 -V 優先於輸入檔 YAML 的 mainfont / CJKmainfont。
+            if ($MainFont) { $pandocArgs += @("-V", "mainfont=$MainFont") }
+            if ($CjkFont)  { $pandocArgs += @("-V", "CJKmainfont=$CjkFont") }
             if ($showOutput) {
                 $pandocArgs += "--verbose"
             }
