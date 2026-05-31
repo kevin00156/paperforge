@@ -65,11 +65,25 @@ if ($Scope -eq "user") {
 Write-Info "目標：$TargetBase (scope=$Scope)"
 
 # 從 SKILL.md frontmatter 讀取 name 欄位（決定安裝目錄名稱）
+# 只認 --- 包住的 frontmatter（與 build.ps1 的 Read-YamlProfile 同款），
+# 避免誤讀正文中以 name: 開頭的行；同時去註解與單雙引號。
 function Get-SkillName {
     param([string]$SkillMd)
-    $match = Select-String -Path $SkillMd -Pattern "^name:\s*(.+)$" | Select-Object -First 1
-    if (-not $match) { return $null }
-    return $match.Matches[0].Groups[1].Value.Trim()
+    $sawStart = $false
+    $inFm = $false
+    foreach ($line in Get-Content -LiteralPath $SkillMd -Encoding UTF8) {
+        if ($line -match '^---\s*$') {
+            if (-not $sawStart) { $sawStart = $true; $inFm = $true; continue }
+            else { break }
+        }
+        if ($inFm -and $line -match '^name\s*:\s*(.+?)\s*$') {
+            $val = $Matches[1]
+            $val = $val -replace '\s+#.*$', ''
+            $val = $val -replace '^[''"]|[''"]$', ''
+            return $val.Trim()
+        }
+    }
+    return $null
 }
 
 function Install-OneSkill {

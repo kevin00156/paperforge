@@ -63,9 +63,20 @@ esac
 log_info "目標：$TARGET_BASE (scope=$SCOPE)"
 
 # --- 從 SKILL.md frontmatter 讀取 name 欄位 ---
+# 用有界 awk FSM（與 build.sh 的 read_yaml_profile 同款）只認 --- 包住的
+# frontmatter，避免誤讀正文中以 name: 開頭的行；同時去註解與單雙引號。
 get_skill_name() {
-    local skill_md="$1"
-    grep -E '^name:' "$skill_md" | head -n1 | sed -E 's/^name:[[:space:]]*//'
+    awk '
+        BEGIN { fm = 0 }
+        /^---[[:space:]]*$/ { fm++; if (fm > 1) exit; next }
+        fm == 1 && /^name[[:space:]]*:/ {
+            sub(/^name[[:space:]]*:[[:space:]]*/, "")
+            sub(/[[:space:]]+#.*$/, "")
+            gsub(/^["\047]|["\047]$/, "")
+            print
+            exit
+        }
+    ' "$1"
 }
 
 # --- 安裝單一 skill ---
