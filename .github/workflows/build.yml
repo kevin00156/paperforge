@@ -137,38 +137,48 @@ jobs:
       - name: Make build script executable
         run: chmod +x scripts/build.sh
 
-      - name: Build minimal example
+      # 自動枚舉每個 paper 類 profile 的 skeleton 並編譯。
+      # 新增 profile 時這裡一行都不用改：放進 profiles/<name>/skeleton/paper.md 即受涵蓋。
+      - name: Build & verify every profile skeleton (paper)
         run: |
-          ./scripts/build.sh examples/minimal/paper.md --verbose
-          ls -lh examples/minimal/paper.pdf
-
-      - name: Build full example
-        run: |
-          ./scripts/build.sh examples/full/paper.md --verbose
-          ls -lh examples/full/paper.pdf
-
-      - name: Verify PDFs are valid
-        run: |
-          for pdf in examples/minimal/paper.pdf examples/full/paper.pdf; do
+          shopt -s nullglob
+          found=0
+          for md in profiles/*/skeleton/paper.md; do
+            found=$((found + 1))
+            echo "::group::build $md"
+            ./scripts/build.sh "$md" --verbose
+            echo "::endgroup::"
+            pdf="${md%/paper.md}/paper.pdf"
             if [ ! -f "$pdf" ]; then
-              echo "::error::Missing PDF: $pdf"
-              exit 1
+              echo "::error::Missing PDF: $pdf"; exit 1
             fi
             size=$(stat -c%s "$pdf")
             if [ "$size" -lt 10240 ]; then
-              echo "::error::PDF too small ($size bytes): $pdf"
-              exit 1
+              echo "::error::PDF too small ($size bytes): $pdf"; exit 1
             fi
             echo "PASS: $pdf ($size bytes)"
           done
+          if [ "$found" -eq 0 ]; then
+            echo "::error::No profiles/*/skeleton/paper.md found"; exit 1
+          fi
+          echo "Compiled $found paper skeleton(s)."
+
+      # examples/full 額外驗證富功能（圖表 / 公式 / 引用），與 skeleton smoke test 互補。
+      - name: Build & verify full example (feature coverage)
+        run: |
+          ./scripts/build.sh examples/full/paper.md --verbose
+          pdf="examples/full/paper.pdf"
+          size=$(stat -c%s "$pdf")
+          [ "$size" -ge 10240 ] || { echo "::error::PDF too small ($size): $pdf"; exit 1; }
+          echo "PASS: $pdf ($size bytes)"
 
       - name: Upload PDFs as artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: example-pdfs
+          name: paper-pdfs
           path: |
-            examples/minimal/paper.pdf
+            profiles/*/skeleton/paper.pdf
             examples/full/paper.pdf
           retention-days: 30
 
@@ -178,6 +188,10 @@ jobs:
         with:
           name: build-logs
           path: |
+            profiles/**/*.log
+            profiles/**/*.tex
+            profiles/**/*.aux
+            profiles/**/*.blg
             examples/**/*.log
             examples/**/*.tex
             examples/**/*.aux
@@ -208,43 +222,44 @@ jobs:
       - name: Make build script executable
         run: chmod +x scripts/build-slides.sh
 
-      - name: Build minimal slides example (PDF)
+      # 自動枚舉每個 slides 類 profile 的 skeleton 並編譯（PDF + HTML）。
+      # 新增 slides profile 時這裡一行都不用改。
+      - name: Build & verify every profile skeleton (slides)
         run: |
-          ./scripts/build-slides.sh examples/slides-minimal/slides.md --pdf --verbose
-          ls -lh examples/slides-minimal/slides.pdf
-
-      - name: Build minimal slides example (HTML)
-        run: |
-          ./scripts/build-slides.sh examples/slides-minimal/slides.md --html
-          ls -lh examples/slides-minimal/slides.html
-
-      - name: Verify outputs
-        run: |
-          pdf="examples/slides-minimal/slides.pdf"
-          if [ ! -f "$pdf" ]; then
-            echo "::error::Missing PDF: $pdf"
-            exit 1
+          shopt -s nullglob
+          found=0
+          for md in profiles/*/skeleton/slides.md; do
+            found=$((found + 1))
+            base="${md%/slides.md}"
+            echo "::group::build $md"
+            ./scripts/build-slides.sh "$md" --pdf --verbose
+            ./scripts/build-slides.sh "$md" --html
+            echo "::endgroup::"
+            pdf="$base/slides.pdf"
+            if [ ! -f "$pdf" ]; then
+              echo "::error::Missing PDF: $pdf"; exit 1
+            fi
+            size=$(stat -c%s "$pdf")
+            if [ "$size" -lt 102400 ]; then
+              echo "::error::PDF too small ($size bytes, expected > 100 KB): $pdf"; exit 1
+            fi
+            html="$base/slides.html"
+            if [ ! -f "$html" ]; then
+              echo "::error::Missing HTML: $html"; exit 1
+            fi
+            echo "PASS: $pdf ($size bytes), $html ($(stat -c%s "$html") bytes)"
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "::error::No profiles/*/skeleton/slides.md found"; exit 1
           fi
-          size=$(stat -c%s "$pdf")
-          if [ "$size" -lt 102400 ]; then
-            echo "::error::PDF too small ($size bytes, expected > 100 KB): $pdf"
-            exit 1
-          fi
-          echo "PASS: $pdf ($size bytes)"
-
-          html="examples/slides-minimal/slides.html"
-          if [ ! -f "$html" ]; then
-            echo "::error::Missing HTML: $html"
-            exit 1
-          fi
-          echo "PASS: $html ($(stat -c%s "$html") bytes)"
+          echo "Compiled $found slides skeleton(s)."
 
       - name: Upload slides artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: example-slides
+          name: slides-outputs
           path: |
-            examples/slides-minimal/slides.pdf
-            examples/slides-minimal/slides.html
+            profiles/*/skeleton/slides.pdf
+            profiles/*/skeleton/slides.html
           retention-days: 30
