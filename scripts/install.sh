@@ -425,9 +425,24 @@ fi
 echo -e "${GREEN}🎉 安裝完成！${NC}"
 echo ""
 echo "下一步："
-echo "  1. 複製論文骨架（選一個 profile）："
-echo "       cp -r profiles/thesis-ncu/skeleton/ my-thesis/    # 國立中央大學"
-echo "       cp -r profiles/thesis-ccu/skeleton/ my-thesis/    # 國立中正大學"
-echo "  2. 編輯 my-thesis/paper.md 的 YAML metadata"
+echo "  1. 複製骨架（選一個 profile，論文或簡報皆可）："
+# 動態枚舉 profiles/*/profile.yaml，新增 profile 自動出現，無需維護清單。
+_repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+for _y in "$_repo_root"/profiles/*/profile.yaml; do
+    [[ -f "$_y" ]] || continue
+    _pname="$(basename "$(dirname "$_y")")"
+    [[ -d "$_repo_root/profiles/$_pname/skeleton" ]] || continue
+    _pdesc="$(awk '
+        function trim(s){ sub(/^[[:space:]]+/,"",s); sub(/[[:space:]]+$/,"",s); gsub(/^["\x27]|["\x27]$/,"",s); return s }
+        want==1 { print trim($0); exit }
+        /^description[[:space:]]*:/ {
+            v=$0; sub(/^description[[:space:]]*:[[:space:]]*/,"",v); v=trim(v)
+            if (v=="|" || v==">" || v=="") { want=1 } else { print v; exit }
+        }' "$_y")"
+    printf "       cp -r profiles/%s/skeleton/ my-work/    # %s\n" "$_pname" "$_pdesc"
+done
+echo "     （完整清單與細節：./scripts/build.sh --list-profiles）"
+echo "  2. 編輯 my-work/paper.md（簡報為 slides.md）的 YAML metadata"
 echo "  3. 設置 Zotero：見 docs/03-zotero-setup.md"
-echo "  4. 編譯論文：./scripts/build.sh my-thesis/paper.md --profile thesis-ncu  # 或 thesis-ccu"
+echo "  4. 編譯：./scripts/build.sh my-work/paper.md --profile <name>"
+echo "       （簡報改用 ./scripts/build-slides.sh my-work/slides.md --profile <name>）"
