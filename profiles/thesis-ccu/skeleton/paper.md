@@ -228,7 +228,7 @@ toc: false                        # 手動插入 \tableofcontents
 
 ## <第一個主題> {#sec:literature-topic1}
 
-<請在此回顧該主題的相關研究。引用文獻範例：[@example-key1; @example-key2]。>
+<請在此回顧該主題的相關研究。引用文獻範例：[@vaswani2017attention; @he2016resnet]。>
 
 ## <第二個主題> {#sec:literature-topic2}
 
