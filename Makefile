@@ -4,7 +4,7 @@
 SHELL := /bin/bash
 .PHONY: help build clean distclean watch test test-minimal test-full \
         slides slides-html slides-watch test-slides \
-        skill install install-marp check-env
+        list-profiles skill install install-marp check-env
 
 # 預設輸入檔案
 INPUT ?= paper.md
@@ -29,6 +29,7 @@ help:
 	@echo "  make test-slides                          編譯 slides-minimal 範例"
 	@echo ""
 	@echo "  -- 工具 --"
+	@echo "  make list-profiles                    列出可用的 profile"
 	@echo "  make skill                            安裝 Claude Code Skill"
 	@echo "  make install                          執行完整安裝腳本"
 	@echo "  make install-marp                     安裝 marp-cli"
@@ -74,6 +75,9 @@ test-slides:
 	@./scripts/build-slides.sh examples/slides-minimal/slides.md --pdf
 
 # -- 工具 --
+list-profiles:
+	@./scripts/build.sh --list-profiles
+
 skill:
 	@bash scripts/install-skill.sh
 
