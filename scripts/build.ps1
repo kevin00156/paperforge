@@ -43,6 +43,9 @@
 .PARAMETER BibStyle
     biblatex 樣式名稱。預設 ieee。
 
+.PARAMETER ListProfiles
+    列出目前可用的 profile（讀 profiles\*\profile.yaml）後結束，不需輸入檔。
+
 .PARAMETER Verbose
     詳細輸出。
 
@@ -74,7 +77,8 @@ param(
     [string]$ProfileName = "thesis-ncu",
 
     [string]$Template = "",
-    [string]$BibStyle = "ieee"
+    [string]$BibStyle = "ieee",
+    [switch]$ListProfiles
 )
 
 # --- 顏色輸出 ---
@@ -110,6 +114,44 @@ function Invoke-Native {
 
 $ScriptDir = Split-Path -Parent $PSCommandPath
 $RepoRoot = Split-Path -Parent $ScriptDir
+
+# --- 列出 profiles\*\profile.yaml 的 name / type / style / description ---
+# 動態枚舉，新增 profile 自動出現，無需維護清單。
+function Show-ProfileList {
+    Write-Host "PaperForge — 可用 profile（profiles\<name>\）：`n"
+    Write-Host ("  {0,-26} {1,-8} {2,-10} {3}" -f "NAME", "TYPE", "STYLE", "DESCRIPTION")
+    $found = 0
+    foreach ($yaml in Get-ChildItem -Path (Join-Path $RepoRoot "profiles") -Filter "profile.yaml" -Recurse -ErrorAction SilentlyContinue) {
+        $found++
+        $name = ""; $type = ""; $style = ""; $desc = ""; $want = $false
+        foreach ($line in Get-Content -LiteralPath $yaml.FullName -Encoding UTF8) {
+            if ($want -and -not $desc) {
+                $desc = $line.Trim() -replace '^[''"]|[''"]$', ''
+                $want = $false
+                continue
+            }
+            if ($line -match '^name\s*:\s*(.*)$')  { $name  = $Matches[1].Trim() -replace '^[''"]|[''"]$', ''; continue }
+            if ($line -match '^type\s*:\s*(.*)$')  { $type  = $Matches[1].Trim() -replace '^[''"]|[''"]$', ''; continue }
+            if ($line -match '^style\s*:\s*(.*)$') { $style = $Matches[1].Trim() -replace '^[''"]|[''"]$', ''; continue }
+            if ($line -match '^description\s*:\s*(.*)$') {
+                $v = $Matches[1].Trim()
+                if ($v -eq "|" -or $v -eq ">" -or $v -eq "") { $want = $true }
+                else { $desc = $v -replace '^[''"]|[''"]$', '' }
+            }
+        }
+        Write-Host ("  {0,-26} {1,-8} {2,-10} {3}" -f $name, $type, $style, $desc)
+    }
+    if ($found -eq 0) {
+        Write-ErrorMsg "找不到任何 profiles\*\profile.yaml"
+        return $false
+    }
+    Write-Host "`n用法：在 paper.md / slides.md 開頭 YAML 寫 profile: <NAME>，或編譯時帶 -ProfileName <NAME>。"
+    return $true
+}
+
+if ($ListProfiles) {
+    if (Show-ProfileList) { exit 0 } else { exit 1 }
+}
 
 # 是否由 CLI 顯式指定 -ProfileName（用 -Profile 別名也算）
 $ProfileFromCli = $PSBoundParameters.ContainsKey('ProfileName')

@@ -23,6 +23,7 @@
 #                      profile: 欄位 > 預設 thesis-ncu。對應 profiles/<name>/。
 #   --template <path>  指定模板（覆寫 --profile 推導出的路徑）
 #   --bib-style <name> biblatex 樣式（預設 ieee）
+#   --list-profiles    列出目前可用的 profile（讀 profiles/*/profile.yaml）後結束
 #   --verbose          詳細輸出
 #   -h, --help         顯示此說明
 #
@@ -64,6 +65,7 @@ BIB_STYLE="ieee"
 PROFILE="thesis-ncu"
 PROFILE_FROM_CLI=false
 TEMPLATE=""
+LIST_PROFILES=false
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -79,12 +81,51 @@ while [[ $# -gt 0 ]]; do
         --profile) PROFILE="$2"; PROFILE_FROM_CLI=true; shift 2 ;;
         --template) TEMPLATE="$2"; shift 2 ;;
         --bib-style) BIB_STYLE="$2"; shift 2 ;;
+        --list-profiles) LIST_PROFILES=true; shift ;;
         --verbose|-v) VERBOSE=true; shift ;;
         -h|--help) usage 0 ;;
         -*) log_error "未知選項: $1"; usage 1 ;;
         *) INPUT="$1"; shift ;;
     esac
 done
+
+# --- 列出 profiles/*/profile.yaml 的 name / type / style / description ---
+# 動態枚舉，新增 profile 自動出現，無需維護清單。
+list_profiles() {
+    printf "PaperForge — 可用 profile（profiles/<name>/）：\n\n"
+    printf "  %-26s %-8s %-10s %s\n" "NAME" "TYPE" "STYLE" "DESCRIPTION"
+    local found=0
+    local y
+    for y in "$REPO_ROOT"/profiles/*/profile.yaml; do
+        [[ -f "$y" ]] || continue
+        found=$((found + 1))
+        awk '
+            function trim(s){ sub(/^[[:space:]]+/,"",s); sub(/[[:space:]]+$/,"",s);
+                              gsub(/^["\047]|["\047]$/,"",s); return s }
+            BEGIN { name=""; type=""; style=""; desc=""; want=0 }
+            want==1 && desc=="" { desc=trim($0); want=0; next }
+            /^name[[:space:]]*:/  { v=$0; sub(/^name[[:space:]]*:/,"",v);  name=trim(v) }
+            /^type[[:space:]]*:/  { v=$0; sub(/^type[[:space:]]*:/,"",v);  type=trim(v) }
+            /^style[[:space:]]*:/ { v=$0; sub(/^style[[:space:]]*:/,"",v); style=trim(v) }
+            /^description[[:space:]]*:/ {
+                v=$0; sub(/^description[[:space:]]*:/,"",v); v=trim(v)
+                if (v=="|" || v==">" || v=="") { want=1 } else { desc=v }
+            }
+            END { printf "  %-26s %-8s %-10s %s\n", name, type, style, desc }
+        ' "$y"
+    done
+    if [[ $found -eq 0 ]]; then
+        log_error "找不到任何 profiles/*/profile.yaml"
+        return 1
+    fi
+    printf "\n用法：在 paper.md / slides.md 開頭 YAML 寫 profile: <NAME>，或編譯時帶 --profile <NAME>。\n"
+}
+
+# --list-profiles：列出後即結束，不需輸入檔
+if [[ "$LIST_PROFILES" == "true" ]]; then
+    list_profiles
+    exit $?
+fi
 
 # --- 讀取 Markdown 檔開頭 YAML frontmatter 的 profile: 欄位 ---
 # 若沒有 frontmatter 或 profile 欄位則回傳空字串
