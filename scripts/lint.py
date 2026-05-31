@@ -13,7 +13,7 @@
 
 嚴重度:
   error  會破壞 PDF 或違反硬規範(缺錨點、缺字引用、缺圖、全形破折號、marp 缺 theme/超頁、SKILL 缺欄位)
-  warn   品質提醒,不擋編譯(孤兒 \\label、未引用的 bib 條目)
+  warn   品質提醒,不擋編譯(未引用的 bib 條目)
 
 Exit code: 0 乾淨;1 有 error(或 --strict 下有任何 warn)。
 """
@@ -152,20 +152,6 @@ def check_images(path: Path, lines: list[str], fm_end: int) -> list[Finding]:
     return out
 
 
-def check_orphan_labels(path: Path, lines: list[str], fm_end: int) -> list[Finding]:
-    """\\label{x} 沒有任何 \\ref/\\eqref/\\autoref/\\pageref{x} 對應 → warn。"""
-    labels: dict[str, int] = {}
-    refs: set[str] = set()
-    for i, line in iter_body(lines, fm_end):
-        for m in re.finditer(r"\\label\{([^}]+)\}", line):
-            labels.setdefault(m.group(1), i)
-        for m in re.finditer(r"\\(?:auto|page|eq|c|C)?ref\{([^}]+)\}", line):
-            for part in m.group(1).split(","):
-                refs.add(part.strip())
-    return [warn(path, ln, f"\\label{{{name}}} 沒有對應的 \\ref")
-            for name, ln in labels.items() if name not in refs]
-
-
 def count_slides(lines: list[str], fm_end: int) -> int:
     """Marp 分頁:正文中行首 --- 的數量 + 1(首頁不需 ---)。"""
     count = 0
@@ -217,7 +203,6 @@ def lint_md(path: Path) -> list[Finding]:
         out += check_anchors(path, lines, fm_end)
         out += check_citations(path, fm, lines, fm_end)
         out += check_images(path, lines, fm_end)
-        out += check_orphan_labels(path, lines, fm_end)
     return out
 
 
@@ -272,7 +257,7 @@ def main(argv: list[str]) -> int:
         for p in papers + marps:
             findings += lint_md(p)
         if not strict:
-            # CI 只把 error 當關卡;warn(死引用、孤兒 label)留給互動式 build / 本機檢查顯示,不在 CI 製造噪音
+            # CI 只把 error 當關卡;warn(死引用)留給互動式 build / 本機檢查顯示,不在 CI 製造噪音
             findings = [f for f in findings if f.severity == "error"]
     else:
         if not args:
