@@ -140,6 +140,7 @@ jobs:
       # 自動枚舉每個 paper 類 profile 的 skeleton 並編譯。
       # 新增 profile 時這裡一行都不用改：放進 profiles/<name>/skeleton/paper.md 即受涵蓋。
       - name: Build & verify every profile skeleton (paper)
+        shell: bash
         run: |
           shopt -s nullglob
           found=0
@@ -225,6 +226,7 @@ jobs:
       # 自動枚舉每個 slides 類 profile 的 skeleton 並編譯（PDF + HTML）。
       # 新增 slides profile 時這裡一行都不用改。
       - name: Build & verify every profile skeleton (slides)
+        shell: bash
         run: |
           shopt -s nullglob
           found=0
