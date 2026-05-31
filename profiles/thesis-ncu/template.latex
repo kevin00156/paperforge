@@ -306,9 +306,6 @@ $highlighting-macros$
 $endif$
 $if(tables)$
 \usepackage{longtable,booktabs,array}
-$if(multirow)$
-\usepackage{multirow}
-$endif$
 \usepackage{calc} % for calculating minipage widths
 $if(beamer)$
 \usepackage{caption}
@@ -326,6 +323,11 @@ $else$
 \IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
 \makesavenoteenv{longtable}
 $endif$
+$endif$
+$if(multirow)$
+% multirow 獨立於 pandoc 的 $tables$ 旗標：手寫 \begin{tabular} 的論文
+% 不會觸發 $tables$,但仍可能用到 \multirow,故由 multirow:true 單獨控制。
+\usepackage{multirow}
 $endif$
 $if(graphics)$
 \usepackage{graphicx}
@@ -496,6 +498,10 @@ $endif$
 \floatplacement{table}{!htbp}
 
 % === 公式:靠左 + 自動編號 (節號-公式號) ===
+% \mathindent 只有在 documentclass 帶 fleqn 時才存在;未帶 fleqn 的文件
+% 直接 \setlength 會碰到未定義長度,導致封面前漏出 "0pt" 且多出一張空白頁。
+% 先補定義當安全網(無 fleqn 時公式維持置中,但不會編譯出錯)。
+\ifdefined\mathindent\else\newlength{\mathindent}\fi
 \setlength{\mathindent}{0pt}
 \numberwithin{equation}{section}
 \renewcommand{\theequation}{\arabic{section}-\arabic{equation}}
