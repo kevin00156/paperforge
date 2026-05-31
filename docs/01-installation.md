@@ -61,6 +61,18 @@ bash scripts/install.sh
 bash scripts/install.sh --skill-only
 ```
 
+## 查看可用 profile
+
+PaperForge 以 **profile** 區分不同學校 / 機關的論文、報告、簡報格式。安裝完成後，用以下指令列出目前支援哪些 profile（會自動枚舉 `profiles/` 目錄，不必去翻原始碼）：
+
+```bash
+./scripts/build.sh --list-profiles      # Linux/macOS
+.\scripts\build.ps1 -ListProfiles       # Windows
+make list-profiles                       # 任一平台（需 make）
+```
+
+輸出會列出每個 profile 的 `NAME` / `TYPE` / `STYLE` / 說明。挑好之後，撰寫流程見 [02-writing-workflow.md](02-writing-workflow.md)。
+
 ## 手動安裝（不想用安裝腳本）
 
 ### 必要工具

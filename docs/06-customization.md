@@ -230,7 +230,13 @@ program: "光機電工程碩士學位學程"
 3. 修改 `profiles/thesis-myschool/template.latex` 的封面 macro 預設值（`\UniversityZh` 等）
 4. 修改 `profiles/thesis-myschool/skeleton/paper.md` 的封面 raw LaTeX 區塊（`\Spaced` 字距、字級、版面）；別忘了把開頭 `profile:` 欄位也改成 `thesis-myschool`，使用者複製 skeleton 後不必帶 `--profile` 旗標就能編譯
 5. 修改 `profiles/thesis-myschool/skill/SKILL.md` 中的字型/格式規範
-6. `./scripts/build.sh paper.md --profile thesis-myschool` 測試（或在 `paper.md` YAML 寫 `profile: thesis-myschool` 後直接 `./scripts/build.sh paper.md`）
+6. 確認 `skeleton/` **開箱即可編譯**：若 `skeleton/paper.md` 有 `\includegraphics` / `![](images/...)`，就要在 `skeleton/images/` 放一張同名佔位圖（使用者 `cp -r` 後第一次編譯不該因缺圖失敗，CI 也會實際編譯這份 skeleton）
+7. `./scripts/build.sh paper.md --profile thesis-myschool` 測試（或在 `paper.md` YAML 寫 `profile: thesis-myschool` 後直接 `./scripts/build.sh paper.md`）
+
+> **不必另外登錄**：新 profile 只要放進 `profiles/<type>-<style>/`，就會自動被
+> `--list-profiles` 列出、也會被 CI（`.github/workflows/build.yml`）自動編譯其
+> skeleton。沒有任何「profile 清單」需要手動同步：這份文件、build script、CI 都靠
+> 枚舉 `profiles/` 取得，加 profile 不需改它們。
 
 歡迎 PR 加入新學校 profile！
 
