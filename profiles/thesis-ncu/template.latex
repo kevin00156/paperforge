@@ -597,6 +597,11 @@ $if(natbib)$
 $endif$
 $if(biblatex)$
 \usepackage[$if(biblio-style)$style=$biblio-style$,$endif$$for(biblatexoptions)$$biblatexoptions$$sep$,$endfor$]{biblatex}
+% 不印瀏覽日期（biblatex 預設對 @online 等條目的 urldate 會輸出「visited on MM/DD/YYYY」）。
+% NCU 口試委員回饋此欄位多餘，故在 biber 資料層直接 null 掉 urldate。
+% 用 sourcemap 而非 \clearfield{urldate}：後者清不到拆解後的 urlyear/urlmonth/urlday
+% 元件（ieee 樣式實測無效），sourcemap 與 style 無關，治本。
+\DeclareSourcemap{\maps[datatype=bibtex]{\map{\step[fieldset=urldate, null]}}}
 $for(bibliography)$
 \addbibresource{$bibliography$}
 $endfor$
