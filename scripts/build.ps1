@@ -355,27 +355,43 @@ if (-not (Test-Path $Template)) {
 }
 
 # --- 編譯函式 ---
+# 解析「真正可用的」python 直譯器。
+# Windows 上 `python` / `python3` 常指向 Microsoft Store 的占位 stub
+# （路徑落在 ...\WindowsApps\python.exe），它不會執行腳本、只會以非 0 退出，
+# 必須排除，否則 lint 永遠跑不起來卻被誤判成「lint 發現問題」。
+function Resolve-Python {
+    foreach ($name in @("python", "python3")) {
+        $cmd = Get-Command $name -ErrorAction SilentlyContinue
+        if (-not $cmd) { continue }
+        if ($cmd.Source -and $cmd.Source -like "*\WindowsApps\*") { continue }  # Store stub，跳過
+        return $cmd.Source
+    }
+    return $null
+}
+
 # --- 格式檢查（lint）---
 # 與 CI 共用同一支 scripts/lint.py。預設僅警告、不擋編譯；-LintStrict 才中止。沒有 python 時優雅略過。
 function Invoke-Lint {
     if ($NoLint) { return }
     $linter = Join-Path $ScriptDir "lint.py"
     if (-not (Test-Path $linter)) { return }
-    $py = if (Get-Command python -ErrorAction SilentlyContinue) { "python" }
-          elseif (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" }
-          else { $null }
+    $py = Resolve-Python
     if (-not $py) { Write-WarnMsg "未安裝 python，略過格式檢查（lint）"; return }
     Write-Info "格式檢查（lint）：$InputAbs"
     $lintArgs = @($linter)
     if ($LintStrict) { $lintArgs += "--strict" }
     $lintArgs += $InputAbs
     $code = Invoke-Native -Cmd $py -ArgList $lintArgs -ShowOutput
-    if ($code -ne 0) {
+    # lint.py 的退出碼語意：0=乾淨；1=發現問題。其他值代表 python 自身異常
+    # （找不到模組、stub 沒跑等），不可當成 lint 結果，否則會誤報。
+    if ($code -eq 1) {
         if ($LintStrict) {
             Write-ErrorMsg "lint 發現問題（-LintStrict 已啟用，中止編譯）"
             exit 1
         }
         Write-WarnMsg "lint 發現問題（僅警告，繼續編譯；要擋編譯請加 -LintStrict）"
+    } elseif ($code -ne 0) {
+        Write-WarnMsg "lint 無法執行（python 退出碼 $code），略過格式檢查"
     }
 }
 
@@ -447,17 +463,36 @@ function Invoke-Build {
             Write-Info "${Engine}：第二次編譯（解析引用）"
             $null = Invoke-Native -Cmd $Engine -ArgList $latexArgs -ShowOutput:$showOutput
 
-            # Step 5: 第三次 XeLaTeX
+            # Step 5: 第三次 XeLaTeX（保留最後一趟的退出碼供驗證）
             Write-Info "${Engine}：第三次編譯（解析目錄）"
-            $null = Invoke-Native -Cmd $Engine -ArgList $latexArgs -ShowOutput:$showOutput
+            $latexCode = Invoke-Native -Cmd $Engine -ArgList $latexArgs -ShowOutput:$showOutput
 
             # 驗證
             $pdfPath = Join-Path $tmpdir "$InputBasename.pdf"
+            $logPath = Join-Path $tmpdir "$InputBasename.log"
             if (-not (Test-Path $pdfPath)) {
-                Write-ErrorMsg "編譯失敗：找不到 PDF"
-                $logPath = Join-Path $tmpdir "$InputBasename.log"
+                Write-ErrorMsg "編譯失敗：找不到 PDF（${Engine} 退出碼 $latexCode）"
                 if (Test-Path $logPath) {
                     Write-ErrorMsg "編譯記錄：$logPath"
+                }
+                exit 1
+            }
+
+            # 完整性檢查：xelatex 中途被中斷（例如 MiKTeX 更新提示升級成致命錯誤、
+            # dvipdfmx 寫到一半夭折）時，會留下尾端缺 %%EOF 的截斷 PDF——大小看似正常、
+            # 卻無法開啟。光看「檔案存在」不夠，必須確認 PDF 確實寫完。
+            $tailLen = [Math]::Min(1024, (Get-Item $pdfPath).Length)
+            $fs = [System.IO.File]::Open($pdfPath, "Open", "Read")
+            try {
+                $buf = New-Object byte[] $tailLen
+                $null = $fs.Seek(-$tailLen, "End")
+                $null = $fs.Read($buf, 0, $tailLen)
+            } finally { $fs.Close() }
+            $tailText = [System.Text.Encoding]::ASCII.GetString($buf)
+            if ($tailText -notmatch "%%EOF") {
+                Write-ErrorMsg "編譯失敗：PDF 不完整（缺 %%EOF，可能編譯途中被中斷；${Engine} 退出碼 $latexCode）"
+                if (Test-Path $logPath) {
+                    Write-ErrorMsg "請查看編譯記錄末尾找出中斷原因：$logPath"
                 }
                 exit 1
             }
