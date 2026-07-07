@@ -330,14 +330,21 @@ do_lint() {
     log_info "格式檢查（lint）：$INPUT_ABS"
     local strict_flag=()
     [[ "$LINT_STRICT" == "true" ]] && strict_flag=(--strict)
-    if python3 "$linter" "${strict_flag[@]}" "$INPUT_ABS"; then
+    local lint_code=0
+    python3 "$linter" "${strict_flag[@]}" "$INPUT_ABS" || lint_code=$?
+    # lint.py 的退出碼語意：0=乾淨；1=發現問題。其他值代表 python3 自身異常
+    # （找不到模組、直譯器壞了等），不可當成 lint 結果，否則會誤報。
+    if [[ "$lint_code" -eq 0 ]]; then
         return 0
+    elif [[ "$lint_code" -eq 1 ]]; then
+        if [[ "$LINT_STRICT" == "true" ]]; then
+            log_error "lint 發現問題（--lint-strict 已啟用，中止編譯）"
+            exit 1
+        fi
+        log_warn "lint 發現問題（僅警告，繼續編譯；要擋編譯請加 --lint-strict）"
+    else
+        log_warn "lint 無法執行（python3 退出碼 $lint_code），略過格式檢查"
     fi
-    if [[ "$LINT_STRICT" == "true" ]]; then
-        log_error "lint 發現問題（--lint-strict 已啟用，中止編譯）"
-        exit 1
-    fi
-    log_warn "lint 發現問題（僅警告，繼續編譯；要擋編譯請加 --lint-strict）"
 }
 
 # --- 核心編譯函式 ---
@@ -439,6 +446,23 @@ do_build() {
         if [[ -f "${INPUT_BASENAME}.log" ]]; then
             log_error "編譯記錄已複製到：$OUTPUT_DIR/${INPUT_BASENAME}.log"
             log_error "最後 80 行："
+            tail -n 80 "${INPUT_BASENAME}.log" >&2 || true
+        fi
+        exit 1
+    fi
+
+    # 完整性檢查：xelatex 中途被中斷（例如 MiKTeX 更新提示升級成致命錯誤、
+    # 或編譯途中 dvipdfmx 夭折）時，會留下尾端缺 %%EOF 的截斷 PDF——大小看似正常、
+    # 卻無法開啟。光看「檔案存在」不夠，必須確認 PDF 確實寫完。
+    if ! tail -c 1024 "${INPUT_BASENAME}.pdf" | grep -q "%%EOF"; then
+        log_error "編譯失敗：PDF 不完整（缺 %%EOF，可能編譯途中被中斷）"
+        for ext in log tex aux blg; do
+            if [[ -f "${INPUT_BASENAME}.${ext}" ]]; then
+                cp "${INPUT_BASENAME}.${ext}" "$OUTPUT_DIR/${INPUT_BASENAME}.${ext}" || true
+            fi
+        done
+        if [[ -f "${INPUT_BASENAME}.log" ]]; then
+            log_error "編譯記錄已複製到：$OUTPUT_DIR/${INPUT_BASENAME}.log（請查末尾找中斷原因）"
             tail -n 80 "${INPUT_BASENAME}.log" >&2 || true
         fi
         exit 1
