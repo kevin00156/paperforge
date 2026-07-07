@@ -527,6 +527,22 @@ $endif$
 \renewcommand{\listfigurename}{圖目錄}
 \renewcommand{\listtablename}{表目錄}
 
+% === 圖目錄/表目錄條目:編號前補「圖 」「表 」,與內文標號一致 ===
+\makeatletter
+\renewcommand*\l@figure[2]{%
+  \begingroup
+  \renewcommand*\numberline[1]{\hb@xt@\@tempdima{圖 ##1\hfil}}%
+  \@dottedtocline{1}{0em}{3.5em}{#1}{#2}%
+  \endgroup
+}
+\renewcommand*\l@table[2]{%
+  \begingroup
+  \renewcommand*\numberline[1]{\hb@xt@\@tempdima{表 ##1\hfil}}%
+  \@dottedtocline{1}{0em}{3.5em}{#1}{#2}%
+  \endgroup
+}
+\makeatother
+
 % === 章標題格式:置中、加粗、加上「第 X 章」前綴 ===
 \titleformat{\section}
   {\centering\Large\bfseries}
