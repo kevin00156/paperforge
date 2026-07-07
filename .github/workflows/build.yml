@@ -4,9 +4,13 @@ name: Build Examples
 # 或下載 Chrome for Testing。
 #
 # Flow：
-#   1. prepare-*-image：build docker image，推到 GHCR，tag = ci-<run_id>。
-#      使用 GHA cache，第二次 PR 跑時 docker build 大多 cache hit。
-#   2. build / build-slides：以該 image 當 container 跑，跳過 apt install / npm install。
+#   每個 job 自己 build docker image（load 進本地 docker daemon，不推 registry），
+#   再用 docker run 把該 image 當編譯環境跑，跳過 apt install / npm install。
+#   靠 GHA layer cache（type=gha），第二次跑時 docker build 大多 cache hit。
+#
+# 為什麼不推 GHCR：fork 來的 pull_request，GITHUB_TOKEN 一律唯讀，push 到 GHCR 會被
+# `denied: installation not allowed to write organization package` 擋下。改成同 job 內
+# load + docker run，就不依賴 registry，對 fork PR 也能跑（順帶省掉推/拉數 GB image）。
 #
 # 觸發時機：
 #   - PR 開啟/更新時
@@ -32,107 +36,38 @@ on:
 
 permissions:
   contents: read
-  packages: write
-
-env:
-  IMAGE_TAG: ci-${{ github.run_id }}
 
 jobs:
-  prepare-paper-image:
-    name: Prepare paper build image
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    outputs:
-      image: ${{ steps.ref.outputs.image }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Lowercase owner
-        id: owner
-        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
-
-      - name: Build & push paper image
-        uses: docker/build-push-action@v6
-        with:
-          context: docker
-          file: docker/paper.Dockerfile
-          push: true
-          tags: ghcr.io/${{ steps.owner.outputs.owner }}/paperforge-paper:${{ env.IMAGE_TAG }}
-          cache-from: type=gha,scope=paperforge-paper
-          cache-to: type=gha,mode=max,scope=paperforge-paper
-
-      - name: Expose image ref
-        id: ref
-        run: echo "image=ghcr.io/${{ steps.owner.outputs.owner }}/paperforge-paper:${{ env.IMAGE_TAG }}" >> "$GITHUB_OUTPUT"
-
-  prepare-slides-image:
-    name: Prepare slides build image
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    outputs:
-      image: ${{ steps.ref.outputs.image }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Lowercase owner
-        id: owner
-        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
-
-      - name: Build & push slides image
-        uses: docker/build-push-action@v6
-        with:
-          context: docker
-          file: docker/slides.Dockerfile
-          push: true
-          tags: ghcr.io/${{ steps.owner.outputs.owner }}/paperforge-slides:${{ env.IMAGE_TAG }}
-          cache-from: type=gha,scope=paperforge-slides
-          cache-to: type=gha,mode=max,scope=paperforge-slides
-
-      - name: Expose image ref
-        id: ref
-        run: echo "image=ghcr.io/${{ steps.owner.outputs.owner }}/paperforge-slides:${{ env.IMAGE_TAG }}" >> "$GITHUB_OUTPUT"
-
   build:
     name: Build PDFs on Ubuntu
-    needs: prepare-paper-image
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    container:
-      image: ${{ needs.prepare-paper-image.outputs.image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 只 load 進本地 daemon，不推 registry。GHA cache 讓第二次 build 大多 cache hit。
+      - name: Build paper image (local, no registry)
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          file: docker/paper.Dockerfile
+          load: true
+          tags: paperforge-paper:ci
+          cache-from: type=gha,scope=paperforge-paper
+          cache-to: type=gha,mode=max,scope=paperforge-paper
+
       - name: Verify environment
         run: |
-          pandoc --version | head -n1
-          xelatex --version | head -n1
-          biber --version | head -n1
-          fc-list :lang=zh-tw | head -n5
+          docker run --rm paperforge-paper:ci bash -c '
+            pandoc --version | head -n1
+            xelatex --version | head -n1
+            biber --version | head -n1
+            fc-list :lang=zh-tw | head -n5
+          '
 
       - name: Make build script executable
         run: chmod +x scripts/build.sh
@@ -144,18 +79,22 @@ jobs:
       # 因此用 --main-font / --cjk-font 強制覆寫為容器內的免費替身。
       # CJK 用「AR PL UKai」免費楷體（非明體），與真實標楷體同為楷體，
       # 能驗出楷體缺 glyph 問題；這把字體維度對「所有」profile（含未來新增）一次中和。
+      #
+      # build.sh 在 container 內跑（吃 pandoc/xelatex），產物經 bind mount 落回 host，
+      # 後面的存在/大小驗證直接在 host 跑。
       - name: Build & verify every profile skeleton (paper)
         shell: bash
         env:
           CI_MAIN_FONT: "Latin Modern Roman"
           CI_CJK_FONT: "AR PL UKai TW"
         run: |
+          run() { docker run --rm -v "$PWD":/workspace -w /workspace paperforge-paper:ci "$@"; }
           shopt -s nullglob
           found=0
           for md in profiles/*/skeleton/paper.md; do
             found=$((found + 1))
             echo "::group::build $md"
-            ./scripts/build.sh "$md" --main-font "$CI_MAIN_FONT" --cjk-font "$CI_CJK_FONT" --verbose
+            run ./scripts/build.sh "$md" --main-font "$CI_MAIN_FONT" --cjk-font "$CI_CJK_FONT" --verbose
             echo "::endgroup::"
             pdf="${md%/paper.md}/paper.pdf"
             if [ ! -f "$pdf" ]; then
@@ -175,7 +114,8 @@ jobs:
       # examples/full 額外驗證富功能（圖表 / 公式 / 引用），與 skeleton smoke test 互補。
       - name: Build & verify full example (feature coverage)
         run: |
-          ./scripts/build.sh examples/full/paper.md --verbose
+          docker run --rm -v "$PWD":/workspace -w /workspace paperforge-paper:ci \
+            ./scripts/build.sh examples/full/paper.md --verbose
           pdf="examples/full/paper.pdf"
           size=$(stat -c%s "$pdf")
           [ "$size" -ge 10240 ] || { echo "::error::PDF too small ($size): $pdf"; exit 1; }
@@ -209,24 +149,32 @@ jobs:
 
   build-slides:
     name: Build Marp Slides on Ubuntu
-    needs: prepare-slides-image
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    container:
-      image: ${{ needs.prepare-slides-image.outputs.image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build slides image (local, no registry)
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          file: docker/slides.Dockerfile
+          load: true
+          tags: paperforge-slides:ci
+          cache-from: type=gha,scope=paperforge-slides
+          cache-to: type=gha,mode=max,scope=paperforge-slides
+
       - name: Verify environment
         run: |
-          node --version
-          marp --version
-          fc-list :lang=zh-tw | head -n3
+          docker run --rm paperforge-slides:ci bash -c '
+            node --version
+            marp --version
+            fc-list :lang=zh-tw | head -n3
+          '
 
       - name: Make build script executable
         run: chmod +x scripts/build-slides.sh
@@ -236,14 +184,15 @@ jobs:
       - name: Build & verify every profile skeleton (slides)
         shell: bash
         run: |
+          run() { docker run --rm -v "$PWD":/workspace -w /workspace paperforge-slides:ci "$@"; }
           shopt -s nullglob
           found=0
           for md in profiles/*/skeleton/slides.md; do
             found=$((found + 1))
             base="${md%/slides.md}"
             echo "::group::build $md"
-            ./scripts/build-slides.sh "$md" --pdf --verbose
-            ./scripts/build-slides.sh "$md" --html
+            run ./scripts/build-slides.sh "$md" --pdf --verbose
+            run ./scripts/build-slides.sh "$md" --html
             echo "::endgroup::"
             pdf="$base/slides.pdf"
             if [ ! -f "$pdf" ]; then
